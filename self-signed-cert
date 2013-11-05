@@ -1,0 +1,340 @@
+#!/bin/bash
+
+set -e
+
+altnamefile="subjaltnames"
+installname="localhost"
+
+errx() {
+    trap - EXIT
+    echo >&2 "$@"
+    exit 1
+}
+
+usage() {
+    echo ""
+    echo " $0 [--extra-cert <shortname>]"
+    echo ""
+    echo " Use --extra-cert to manage multiple certs on this machine."
+    echo ""
+}
+
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ "$1" == "--extra-cert" ]]; then
+    shift; extra="$1"; shift
+    altnamefile="subjaltnames.$extra"
+    installname="extra-$extra"
+fi
+
+for d in /etc/pki/tls /etc/ssl; do
+    if [[ -d "$d" ]]; then
+	installdir="$d"
+	break;
+    fi
+done
+
+if [[ -z "$d" ]]; then
+    errx "No certificate install directory found. Install your distros SSL tools. (yum install ca-certificates)"
+fi
+
+basedir="$(cd "$(dirname "$0")" && pwd)"
+if [[ -r "${basedir}/config" ]]; then
+	. "${basedir}/config"
+	certO="$certOrg"
+fi
+t="${idpurl#*://}"
+idphostname="${t%/*}"
+
+hostname="$idphostname"
+ipaddrs=$(ip addr show scope global | sed -nre 's,^ +inet[^ ]* ([^ /]+)(|/[^ ]+) .*$,\1,p;')
+v4addr=$(dig +short $(hostname) IN A) || :
+v6addr=$(dig +short $(hostname) IN AAAA) || :
+for addr in $v6addr $v4addr $ipaddrs; do
+    if fqdndot=$(dig +short -x $addr) && [[ -n "$fqdndot" ]]; then
+	if host "$fqdndot" >/dev/null 2>&1; then
+	    hostname="${fqdndot%.}"
+	    break
+	fi
+    fi
+done
+
+while [[ -z "$hostname" ]]; do
+    echo -n "Enter FQDN: "
+    read hostname
+done
+
+names_from_http=$(cat /etc/httpd/conf.d/*.conf /etc/apache2/* /etc/apache2/*/* 2>/dev/null|sed -n 's,#.*,,; s/^[ \t]*ServerName[ \t][ \t]*//p;'|cut -d: -f1|sort -u)
+if [ -e "$installdir"/certs/localhost.crt ]; then
+    names_from_cert=$(openssl x509 -in "$installdir"/certs/localhost.crt -noout -text|fgrep -A 1 'X509v3 Subject Alternative Name'|tail -1|tr ', \t' '\n\n\n'|sed -n 's/^DNS://p;')
+fi
+
+mcd() {
+    mkdir -p "$1"
+    chmod 700 "$1"
+    cd "$1"
+}
+
+has_name() {
+    subjaltnames=$(cat "$altnamefile")
+    for altname in $subjaltnames; do
+	if [[ "$altname" = "$addname" ]]; then
+	    return 0
+	fi
+    done
+    return 1
+}
+
+add_name() {
+    local addname="$1"
+    if [ ! -e "$altnamefile" ]; then
+	if [[ -z "$extra" ]]; then
+            echo $hostname >"$altnamefile"
+	else
+            echo -n "" >"$altnamefile"
+	fi
+    fi
+    if ! has_name "$addname"; then
+	echo -n "Do you want to add the name $addname ? (y/n) "
+	read ans
+	if [[ "$ans" != "y" ]]; then
+	    echo "Not adding $addname."
+	    return
+	fi
+	echo "$addname" >>"$altnamefile"
+    fi
+}
+
+mcd /root/certs/selfsigned
+
+if [[ -z "$certC" ]]; then
+    cc=$(tr '[[:lower:]]' '[[:upper:]]' <<<"${hostname##*.}")
+    if [[ "$cc" == ?? ]]; then
+	certC="$cc"
+    fi
+fi
+
+while [[ -z "$certC" ]]; do
+    echo -n "Country code (C): [SE, GB, ...] > "
+    read certC
+done
+echo "Country (C) is set to: $certC"
+while [[ -z "$certO" ]]; do
+    echo -n "Organization (O): [Kungliga Tekniska högskolan, ...] > "
+    read certO
+done
+echo "Organization (O) is set to: $certO"
+while [[ -z "$certOU" ]]; do
+    echo -n "Organizational Unit (OU): [ITA, CSC, ...] > "
+    read certOU
+done
+echo "Organizational Unit (OU) is set to: $certOU"
+
+# Make sure hostname is first.
+if [[ -z "$extra" ]]; then
+    if [[ -e "$altnamefile" ]]; then
+	if [[ $(head -1 subjaltnames) != $hostname ]]; then
+	    mv "$altnamefile" "$altnamefile".old
+	    old_names=$(cat "$altnamefile".old)
+	fi
+    fi
+fi
+
+if [[ -n "$extra" ]]; then
+    add_name $extra
+fi
+if [[ $hostname != "$extra" ]]; then
+    add_name $hostname
+fi
+for name in $(for n in $old_names $names_from_http $names_from_cert; do echo $n; done | sort -u); do
+    if [[ $name != "$extra" && $name != $hostname ]]; then
+	add_name $name
+    fi
+done
+
+echo "This is the current list of aliases:"
+echo ""
+cat "$altnamefile"
+echo ""
+echo "If that is ok, press Return. If you need to edit it, press Ctrl-C and edit"
+echo "$PWD/$altnamefile"
+echo "and then rerun this command."
+read dummy
+
+cn=$(head -1 "$altnamefile")
+certname=$cn-$(date '+%F-%T')
+if [[ -n "$extra" ]]; then
+    certname=extra-$extra-$(date '+%F-%T')
+fi
+
+echo "Updating $certname.conf..."
+
+cat >$certname.conf <<EOF
+[req]
+default_bits = 4096
+prompt = no
+encrypt_key = no
+default_md = sha256
+distinguished_name = dn
+utf8 = yes
+req_extensions = v3_req
+
+[ v3_req ]
+subjectAltName          = @alt_names
+
+[ dn ]
+C = $certC
+O = $certO
+OU = $certOU
+CN = $cn
+
+[alt_names]
+EOF
+
+declare -i dnsnum=1
+for altname in $(cat "$altnamefile"); do
+    echo "DNS.$dnsnum = $altname" >>$certname.conf
+    ((dnsnum+=1))
+done
+
+if [[ -n "$extra" ]]; then
+    echo "$extra" >$certname.extra
+fi
+
+echo "Creating a certificate signing request..."
+if [ -L "$installdir"/private/"$installname".key ] && oldkeyfile=$(readlink "$installdir"/private/"$installname".key) && [[ . == "$(dirname "$oldkeyfile")" ]] && [ -e "$oldkeyfile" ] && (( $(openssl rsa -in "$oldkeyfile" -noout -text|sed -nre 's,^Private-Key:\s*\(([0-9]+) bit\).*$,\1,p;') >= 4096 )); then
+    openssl req -new -config $certname.conf -key $oldkeyfile -out $certname.csr
+    ln -s $oldkeyfile $certname.key
+else
+    if [[ -e "$installdir"/private/"$installname".key ]]; then
+	echo "Notice: Generating a new private key, a service restart will be required when installing the new certificate."
+    fi
+    openssl req -new -config $certname.conf -keyout $certname.key -out $certname.csr
+    chmod 400 $certname.key
+fi
+
+onexit() {
+    local -i exitcode=$?
+    local cmd="$BASH_COMMAND"
+    set +x
+    trap - EXIT
+    if (( $exitcode != 0 )); then
+	echo "$0": command '"'"$cmd"'"' failed with code "$exitcode"
+	exit $exitcode
+    fi
+    exit 0
+}
+trap onexit EXIT
+
+tmpdir=$(mktemp -d)
+openssl x509 -req -days 365 -in $certname.csr -signkey $certname.key -out "$certname.crt"
+
+if [[ ! -e "$installname.pass" ]]; then
+    touch "$installname.pass"
+    chmod 600 "$installname.pass"
+    mkpasswd -l 20 -s 0 >"$installname.pass"
+fi
+
+# Create a PKCS12 format copy, containing the certificate and the private key.
+touch "$certname-private.p12.new"
+chmod 600 "$certname-private.p12.new"
+openssl pkcs12 -export -in "$certname.crt" -certfile "$certname.crt" -inkey "$certname.key" -out "$certname-private.p12.new" -name "$certname" -passout file:"$installname.pass"
+mv "$certname-private.p12.new" "$certname-private.p12"
+
+echo "Installing certificate files..."
+
+install_file() {
+    local from="$1"
+    local to="$2"
+    if [ -e "$to" ]; then
+	echo 2>&1 "$to already exists."
+    fi
+    cp -p "$from" "$to"
+}
+
+install_file "$certname.crt" "$installdir"/certs/$certname.crt
+if [ ! -L "$certname.key" ]; then
+    install_file "$certname.key" "$installdir"/private/$certname.key
+fi
+install_file "$certname-private.p12" "$installdir"/private/$certname.p12
+
+if [ -e "$installdir"/certs/"$installname".crt -a ! -L "$installdir"/certs/"$installname".crt ]; then
+    if [ -e "$installdir"/private/"$installname".key -a ! -L "$installdir"/private/"$installname".key ]; then
+	# "$installname" cert is not a symlink. Might be a locally generate self-signed certificate.
+	if openssl x509 -in "$installdir"/certs/"$installname".crt -noout -text|fgrep -q 'Issuer: C=--, ST=SomeState, L=SomeCity, O=SomeOrganization, OU=SomeOrganizationalUnit'; then
+	    echo "Renaming old self-signed certificate."
+	    mv "$installdir"/certs/"$installname".crt{,.replaced-by-$certname}
+	    ln -s "$installname".crt.replaced-by-$certname "$installdir"/certs/"$installname".crt
+	    mv "$installdir"/private/"$installname".key{,.replaced-by-$certname}
+	    ln -s "$installname".key.replaced-by-$certname "$installdir"/private/"$installname".key
+	else
+	    echo >&2 "Get rid of "$installdir"/private/"$installname".key and "$installdir"/certs/"$installname".crt first!"
+	    exit 1
+	fi
+    fi
+fi
+
+symlink() {
+    local link="$1"
+    local file="$2"
+    if [ -L "$link" ]; then
+	rm "$link"
+    fi
+    if [ ! -e "$link" ]; then
+	ln -s "$file" "$link"
+    fi
+}
+
+symlink "$installdir"/certs/"$installname".crt $certname.crt
+if [ -L $certname.key ]; then
+    symlink "$installdir"/private/"$installname".key $(readlink $certname.key)
+else
+    if [[ -e "$installdir"/private/"$installname".key ]]; then
+	if [[ $(readlink -f "$installdir"/private/"$installname".key) != $(readlink -f "$installdir"/private/$certname.key) ]]; then
+	    echo ""
+	    echo "NOTICE: The private key was changed, an immediate service restart is recommended"
+	fi
+    fi
+    symlink "$installdir"/private/"$installname".key $certname.key
+fi
+symlink "$installdir"/private/"$installname".p12 $certname.p12
+
+javakeystore=.../path/to/cacerts
+for f in {/etc/pki,/etc/ssl/certs}/java/cacerts; do
+    if [[ -r "$f" ]]; then javakeystore="$f"; break; fi
+done
+declare -i i=1
+echo '#!/bin/bash' >"install-$installname-in-java-keystore"
+chmod 700 "install-$installname-in-java-keystore"
+echo "cd '$PWD'" >>"install-$installname-in-java-keystore"
+echo "keytool -import -noprompt -trustcacerts -alias '$certname' -file '$certname.crt' -keystore '$javakeystore' -storepass changeit" >>"install-$installname-in-java-keystore"
+
+echo ""
+echo "Certificates installed in $installdir."
+echo ""
+echo "For Apache, the correct configuration is:"
+echo "SSLCertificateFile $installdir/certs/$installname.crt"
+echo "SSLCertificateKeyFile $installdir/private/$installname.key"
+echo ""
+echo "For PostgreSQL, the correct configuration is:"
+echo "ssl=on"
+echo "ssl_cert_file='$installdir/certs/$installname.crt'"
+echo "ssl_key_file='$installdir/private/$installname.key'"
+echo "ssl_ca_file='$installdir/cert.pem'"
+echo ""
+echo "A PKCS#12 file is available as $installdir/private/$installname.p12"
+echo "containing the private key and the certificate. It is encrypted"
+echo "with the pass file $PWD/$installname.pass"
+echo ""
+echo "To add the certificate to the Java keystore, run:"
+echo " $PWD/install-$installname-in-java-keystore"
+echo ""
+
+cat >>"${basedir}/config" <<EOM
+certOrg="${certO}"
+certC="${certC}"
+certCN="$cn"
+EOM

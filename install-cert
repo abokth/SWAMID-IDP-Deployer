@@ -1,0 +1,238 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+onexit() {
+    local -i exitcode=$?
+    local cmd="$BASH_COMMAND"
+    set +x
+    trap - EXIT
+    if (( $exitcode != 0 )); then
+	echo "$0": command '"'"$cmd"'"' failed with code "$exitcode"
+	exit $exitcode
+    fi
+    exit 0
+}
+trap onexit EXIT
+
+errx() {
+    trap - EXIT
+    echo >&2 "$@"
+    exit 1
+}
+
+for d in /etc/pki/tls /etc/ssl; do
+    if [[ -d "$d" ]]; then
+	installdir="$d"
+	break;
+    fi
+done
+
+if [[ -z "$d" ]]; then
+    errx "No certificate install directory found. Install your distros SSL tools. (yum install ca-certificates)"
+fi
+
+if [[ -e /root/certs/sunet-tcs ]]; then
+    cd /root/certs/sunet-tcs
+
+    if [ $# -eq 1 ]; then
+	url="$1"
+    else
+	echo "Paste the URL from the mail you got here: "
+	read url
+    fi
+
+    tmpdir=$(mktemp -d)
+    wget -q -O "$tmpdir/cert.crt" "$url"cert-pem || errx "Fetch of ${url}cert-pem failed."
+    wget -q -O "$tmpdir/cert-chain.crt" "$url"chain-pem || errx "Fetch of ${url}chain-pem failed."
+elif [[ -e /root/certs/requests ]]; then
+    cd /root/certs/requests
+
+    tmpdir=$(mktemp -d)
+    echo "Step 1: Copy your certificate in PEM format to $tmpdir/cert.crt"
+    echo "Step 2: Copy your certificate chain in PEM format to $tmpdir/cert-chain.crt"
+    echo "Step 3: Press enter."
+    read dummy
+else
+    errx "You need to run request-cert first."
+fi
+
+openssl x509 -noout -in "$tmpdir/cert.crt" || errx "Fetch of cert.crt failed."
+openssl x509 -noout -in "$tmpdir/cert-chain.crt" || errx "Fetch of cert-chain.crt failed."
+
+id=$(openssl x509 -in "$tmpdir/cert.crt" -noout -text|egrep -A 2 '(RSA Public Key|Public-Key):'|tail -1|sed 's,[ \t]*,,g;')
+
+for csr in *.csr; do
+    csrid=$(openssl req -in "$csr" -noout -text|egrep -A 2 '(RSA Public Key|Public-Key):'|tail -1|sed 's,[ \t]*,,g;')
+    if [[ "$csrid" = "$id" ]]; then
+	use_csr="$csr"
+    fi
+done
+
+if [ -z "$use_csr" ]; then
+    echo >&2 "No matching certificate request found."
+    exit 1
+fi
+
+certname=$(basename "$use_csr"|sed 's,\.csr$,,;')
+
+echo "Matching CSR is $certname.csr"
+
+if [[ -e "$certname.extra" ]]; then
+    extra=$(cat "$certname.extra")
+fi
+
+if [ -e "$certname.crt" -o -e "$certname-chain.crt" ]; then
+    echo "This certificate was already downloaded. Maybe it isn't installed, though."
+fi
+
+cp "$tmpdir/cert.crt" "$certname.crt"
+cp "$tmpdir/cert-chain.crt" "$certname-chain.crt"
+
+cat >"$certname-and-chain.crt" "$certname.crt" "$certname-chain.crt"
+
+installname="localhost"
+chainname="server-chain"
+installandchainname="localhost-and-chain"
+if [[ -n "$extra" ]]; then
+    installname="extra-$extra"
+    chainname="server-chain-$extra"
+    installandchainname="extra-$extra-and-chain"
+fi
+
+if [[ ! -e "$installname.pass" ]]; then
+    touch "$installname.pass"
+    chmod 600 "$installname.pass"
+    mkpasswd -l 20 -s 0 >"$installname.pass"
+fi
+
+# Create a PKCS12 format copy, containing the certificate, the chain and the private key.
+touch "$certname-private.p12.new"
+chmod 600 "$certname-private.p12.new"
+openssl pkcs12 -export -in "$certname.crt" -certfile "$certname-chain.crt" -inkey "$certname.key" -out "$certname-private.p12.new" -name "$certname" -passout file:"$installname.pass"
+mv "$certname-private.p12.new" "$certname-private.p12"
+
+# Split the chain in its links
+declare -i linknum=1
+declare linkdata="" line=""
+{ while read line; do
+      linkdata="$linkdata
+$line"
+      if [[ "$line" == "-----END CERTIFICATE-----" ]]; then
+	  echo >"$installname-chain-link-$linknum.crt" "$linkdata"
+	  linkdata=""
+	  linknum=$((linknum+1))
+      fi
+  done
+} <"$certname-chain.crt"
+
+echo "Installing certificate files..."
+
+install_file() {
+    local from="$1"
+    local to="$2"
+    if [ -e "$to" ]; then
+	echo 2>&1 "$to already exists."
+    fi
+    cp -p "$from" "$to"
+}
+
+install_file "$certname.crt" "$installdir"/certs/$certname.crt
+install_file "$certname-chain.crt" "$installdir"/certs/$certname-chain.crt
+install_file "$certname-and-chain.crt" "$installdir"/certs/$certname-and-chain.crt
+if [ ! -L "$certname.key" ]; then
+    install_file "$certname.key" "$installdir"/private/$certname.key
+fi
+install_file "$certname-private.p12" "$installdir"/private/$certname.p12
+
+if [ -e "$installdir"/certs/"$installname".crt -a ! -L "$installdir"/certs/"$installname".crt ]; then
+    if [ -e "$installdir"/private/"$installname".key -a ! -L "$installdir"/private/"$installname".key ]; then
+	# "$installname" cert is not a symlink. Might be a locally generate self-signed certificate.
+	if openssl x509 -in "$installdir"/certs/"$installname".crt -noout -text|fgrep -q 'Issuer: C=--, ST=SomeState, L=SomeCity, O=SomeOrganization, OU=SomeOrganizationalUnit'; then
+	    echo "Renaming old self-signed certificate."
+	    mv "$installdir"/certs/"$installname".crt{,.replaced-by-$certname}
+	    ln -s "$installname".crt.replaced-by-$certname "$installdir"/certs/"$installname".crt
+	    mv "$installdir"/private/"$installname".key{,.replaced-by-$certname}
+	    ln -s "$installname".key.replaced-by-$certname "$installdir"/private/"$installname".key
+	else
+	    echo >&2 "Get rid of "$installdir"/private/"$installname".key and "$installdir"/certs/"$installname".crt first!"
+	    exit 1
+	fi
+    fi
+fi
+
+symlink() {
+    local link="$1"
+    local file="$2"
+    if [ -L "$link" ]; then
+	rm "$link"
+    fi
+    if [ ! -e "$link" ]; then
+	ln -s "$file" "$link"
+    fi
+}
+
+symlink "$installdir"/certs/"$installname".crt $certname.crt
+symlink "$installdir"/certs/"$chainname".crt $certname-chain.crt
+symlink "$installdir"/certs/"$installandchainname".crt $certname-and-chain.crt
+if [ -L $certname.key ]; then
+    symlink "$installdir"/private/"$installname".key $(readlink $certname.key)
+else
+    if [[ -e "$installdir"/private/"$installname".key ]]; then
+	if [[ $(readlink -f "$installdir"/private/"$installname".key) != $(readlink -f "$installdir"/private/$certname.key) ]]; then
+	    echo ""
+	    echo "NOTICE: The private key was changed, an immediate service restart is recommended"
+	fi
+    fi
+    symlink "$installdir"/private/"$installname".key $certname.key
+fi
+symlink "$installdir"/private/"$installname".p12 $certname.p12
+
+if [[ -z "$extra" ]]; then
+    if [ ! -e /etc/httpd/conf.d/ssl.conf ]; then
+	if type -t yum >/dev/null 2>&1; then
+	    yum install mod_ssl || :
+	fi
+    fi
+
+    if [ -e /etc/httpd/conf.d/ssl.conf ]; then
+	sed -i /etc/httpd/conf.d/ssl.conf -re 's,^#(SSLCertificateChainFile '"$installdir"'/certs/server-chain\.crt)$,\1,;'
+    fi
+fi
+
+javakeystore=.../path/to/cacerts
+for f in {/etc/pki,/etc/ssl/certs}/java/cacerts; do
+    if [[ -r "$f" ]]; then javakeystore="$f"; break; fi
+done
+declare -i i=1
+echo '#!/bin/bash' >"install-$installname-chain-in-java-keystore"
+chmod 700 "install-$installname-chain-in-java-keystore"
+echo "cd '$PWD'" >>"install-$installname-chain-in-java-keystore"
+while (( i <= linknum )); do
+    echo "keytool -import -noprompt -trustcacerts -alias '$installname-chain-link-$i' -file '$installname-chain-link-$i.crt' -keystore '$javakeystore' -storepass changeit" >>"install-$installname-chain-in-java-keystore"
+    i=$((i+1))
+done
+
+echo ""
+echo "Certificates installed in $installdir."
+echo ""
+echo "For Apache, the correct configuration is:"
+echo "SSLCertificateFile $installdir/certs/$installname.crt"
+echo "SSLCertificateKeyFile $installdir/private/$installname.key"
+echo "SSLCertificateChainFile $installdir/certs/$chainname.crt"
+echo ""
+echo "For PostgreSQL, the correct configuration is:"
+echo "ssl=on"
+echo "ssl_cert_file='$installdir/certs/$installandchainname.crt'"
+echo "ssl_key_file='$installdir/private/$installname.key'"
+echo "ssl_ca_file='$installdir/cert.pem'"
+echo ""
+echo "A PKCS#12 file is available as $installdir/private/$installname.p12"
+echo "containing the private key and the certificate chain. It is encrypted"
+echo "with the pass file $PWD/$installname.pass"
+echo ""
+echo "To add the certificate chain to the Java keystore, run:"
+echo " $PWD/install-$installname-chain-in-java-keystore"
+echo ""
+
