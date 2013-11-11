@@ -15,7 +15,7 @@
         <ph:RequestPath>/Status</ph:RequestPath>
     </ph:ProfileHandler>
     
-    <ph:ProfileHandler xsi:type="ph:SAMLMetadata" metadataFile="/opt/shibboleth-idp/metadata/idp-metadata.xml">
+    <ph:ProfileHandler xsi:type="ph:SAMLMetadata" metadataFile="$IDP_HOME$/metadata/idp-metadata.xml">
         <ph:RequestPath>/Metadata/SAML</ph:RequestPath>
     </ph:ProfileHandler>    
 

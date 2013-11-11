@@ -28,10 +28,10 @@
         Logging appenders define where and how logging messages are logged.
      -->
     <appender name="IDP_ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <File>/opt/shibboleth-idp/logs/idp-access.log</File>
+        <File>$IDP_HOME$/logs/idp-access.log</File>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <FileNamePattern>/opt/shibboleth-idp/logs/idp-access-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>$IDP_HOME$/logs/idp-access-%d{yyyy-MM-dd}.log</FileNamePattern>
         </rollingPolicy>
 
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -41,10 +41,10 @@
     </appender>
 
     <appender name="IDP_AUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <File>/opt/shibboleth-idp/logs/idp-audit.log</File>
+        <File>$IDP_HOME$/logs/idp-audit.log</File>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <FileNamePattern>/opt/shibboleth-idp/logs/idp-audit-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>$IDP_HOME$/logs/idp-audit-%d{yyyy-MM-dd}.log</FileNamePattern>
         </rollingPolicy>
 
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -63,10 +63,10 @@
 %%%%enable_fticks%%%% -->
 
     <appender name="IDP_PROCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <File>/opt/shibboleth-idp/logs/idp-process.log</File>
+        <File>$IDP_HOME$/logs/idp-process.log</File>
         
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <FileNamePattern>/opt/shibboleth-idp/logs/idp-process-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>$IDP_HOME$/logs/idp-process-%d{yyyy-MM-dd}.log</FileNamePattern>
         </rollingPolicy>
 
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">

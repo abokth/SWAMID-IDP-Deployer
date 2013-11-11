@@ -84,7 +84,7 @@
     
     	<!-- Load the IdP's own metadata.  This is necessary for artifact support. -->
         <metadata:MetadataProvider id="IdPMD" xsi:type="metadata:FilesystemMetadataProvider"
-                                   metadataFile="/opt/shibboleth-idp/metadata/idp-metadata.xml"
+                                   metadataFile="$IDP_HOME$/metadata/idp-metadata.xml"
                                    maxRefreshDelay="P1D" />
         
     <metadata:MetadataProvider id="URLMD" xsi:type="FileBackedHTTPMetadataProvider" xmlns="urn:mace:shibboleth:2.0:metadata"
@@ -124,7 +124,7 @@
         <!--
         <metadata:MetadataProvider id="URLMD" xsi:type="metadata:FileBackedHTTPMetadataProvider"
                           metadataURL="http://example.org/metadata.xml"
-                          backingFile="/opt/shibboleth-idp/metadata/some-metadata.xml">
+                          backingFile="$IDP_HOME$/metadata/some-metadata.xml">
             <metadata:MetadataFilter xsi:type="metadata:ChainingFilter">
                 <metadata:MetadataFilter xsi:type="metadata:RequiredValidUntil" 
                                 maxValidityInterval="P7D" />
@@ -149,8 +149,8 @@
     <!--     Security Configurations                -->
     <!-- ========================================== -->
     <security:Credential id="IdPCredential" xsi:type="security:X509Filesystem">
-        <security:PrivateKey>/opt/shibboleth-idp/credentials/idp.key</security:PrivateKey>
-        <security:Certificate>/opt/shibboleth-idp/credentials/idp.crt</security:Certificate>
+        <security:PrivateKey>$IDP_HOME$/credentials/idp.key</security:PrivateKey>
+        <security:Certificate>$IDP_HOME$/credentials/idp.crt</security:Certificate>
     </security:Credential>
     
     <security:TrustEngine id="swamid-metadata-signer" xsi:type="security:StaticExplicitKeySignature">
@@ -163,7 +163,7 @@
     <!--
     <security:TrustEngine id="shibboleth.MetadataTrustEngine" xsi:type="security:StaticExplicitKeySignature">
         <security:Credential id="MyFederation1Credentials" xsi:type="security:X509Filesystem">
-            <security:Certificate>/opt/shibboleth-idp/credentials/federation1.crt</security:Certificate>
+            <security:Certificate>$IDP_HOME$/credentials/federation1.crt</security:Certificate>
         </security:Credential>
     </security:TrustEngine>
      -->
