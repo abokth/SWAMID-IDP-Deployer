@@ -75,8 +75,16 @@
         </encoder>
     </appender>
   
+    <appender name="IDP_SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+        <SyslogHost>127.0.0.1</SyslogHost>
+        <Port>514</Port>
+        <Facility>AUTH</Facility>
+        <SuffixPattern>[%logger:%line] %msg</SuffixPattern>
+    </appender>
+
     <logger name="Shibboleth-Access" level="ALL">
         <appender-ref ref="IDP_ACCESS"/>
+        <appender-ref ref="IDP_SYSLOG"/>
     </logger>
     
     <logger name="Shibboleth-Audit" level="ALL">
@@ -84,6 +92,7 @@
 <!-- %%%%enable_fticks%%%%
         <appender-ref ref="IDP_FTICKS"/>
 %%%%enable_fticks%%%% -->
+        <appender-ref ref="IDP_SYSLOG"/>
     </logger>
         
     <logger name="org.springframework" level="OFF"/>
@@ -92,6 +101,11 @@
 
     <root level="ERROR">
         <appender-ref ref="IDP_PROCESS"/>
+        <appender-ref ref="IDP_SYSLOG"/>
+    </root>
+
+    <root>
+        <appender-ref ref="IDP_SYSLOG"/>
     </root>
 
 </configuration>
