@@ -330,15 +330,15 @@ if [[ "$fticks" == "y" ]]; then
 	fi
 fi
 
-while [[ "$targetedid" == "y" && -z "$esalt" && "$newdomain" != "y" ]] || [[ "$fticks" == "y" && -z "$have_fticks_key" && "$newdomain" != "y" ]]; do
+while [[ "$targetedid" == "y" && -z "$esalt" && "$newdomain" != "new" ]] || [[ "$fticks" == "y" && -z "$have_fticks_key" && "$newdomain" != "new" ]]; do
 	menu_input newdomain "New domain" "Is this a new domain? (Generate new persistent ID and FTICKS keys?)" 3 "." "" new "This is a new domain" moved "This domain is being/has been served by another server."
 	if [[ "$newdomain" == "." ]]; then newdomain=""; fi
 
-	if [[ "$targetedid" == "y" && -z "$esalt" && "$newdomain" == "n" ]]; then
+	if [[ "$targetedid" == "y" && -z "$esalt" && "$newdomain" == "moved" ]]; then
 		text_input esalt "Targeted ID/EPTID salt" "Please input the old Targeted ID/EPTID salt for this domain. (Look in $persistentid_salt_file and $installdir/conf/attribute-resolver.properties on your old server.)" ""
 	fi
 
-	if [[ "$fticks" == "y" && -z "$have_fticks_key" && "$newdomain" == "n" ]]; then
+	if [[ "$fticks" == "y" && -z "$have_fticks_key" && "$newdomain" == "moved" ]]; then
 		text_input ftickskey "FTICKS key" "Please input the old FTICKS key for this domain. (Look in $fticks_key_file and $installdir/conf/fticks-key.txt on your old server.)" ""
 		if [[ -n "$ftickskey" ]]; then
 			have_fticks_key=yes
