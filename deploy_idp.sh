@@ -576,7 +576,7 @@ required, select a suitable version using 'alternatives --config java'."
 	fi
 
 	if [[ "${uapprove}" == "y" || "${targetedid}" == "y" ]]; then
-		if [[ "$uapprove_db_host" == "localhost" || "$targetedid_db_host" == "localhost" ]]; then
+		if [[ "$uapprove_db_host" == "localhost" || "$uapprove_db_host" == "localhost.localdomain" || "$targetedid_db_host" == "localhost" || "$targetedid_db_host" == "localhost.localdomain" ]]; then
 			rpm -q >/dev/null 2>&1 postgresql-server || yum install postgresql-server
 		fi
 		rpm -q >/dev/null 2>&1 postgresql-jdbc || yum install postgresql-jdbc
