@@ -314,7 +314,6 @@ fticks_key_file=/root/fticks-key-backup-$schachomeorganization
 
 text_input scope "Attribute value scope" "Please input the scope for attribute values (xxx.yy)" "$schachomeorganization"
 
-newdomain="moved"
 if [[ "$targetedid" == "y" ]]; then
 	if [[ -e "$persistentid_salt_file" ]]; then
 		esalt=$(cat "$persistentid_salt_file")
