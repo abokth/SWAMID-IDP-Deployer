@@ -243,7 +243,6 @@ menu_input() {
 				whiptailtmp=$(mktemp)
 				tmpfiles[${#tmpfiles[@]}]="$whiptailtmp"
 			fi
-			echo XXX whiptail --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --clear --menu "$prompt" ${whipSize} "$@"
 			whiptail --output-fd=10 10>"$whiptailtmp" --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --clear --menu "$prompt" ${whipSize} "$@" || :
 			value=$(cat "$whiptailtmp")
 		else
