@@ -642,6 +642,10 @@ mkdir -p "$builddir"
 opttmp=$(mktemp -d "$builddir"/shib-deploy-XXXXXX)
 tmpfiles[${#tmpfiles[@]}]="$opttmp"
 
+mkdir -p "$downloaddir"
+
+fetchurl shibboleth-identityprovider-${shibVer}-bin.zip "http://shibboleth.net/downloads/identity-provider/${shibVer}/shibboleth-identityprovider-${shibVer}-bin.zip"
+
 cd "$opttmp"
 if [[ ! -e "$builddir/shibboleth-identityprovider-${shibVer}" ]]; then
 	unzip -q "$downloaddir"/shibboleth-identityprovider-${shibVer}-bin.zip
@@ -782,10 +786,6 @@ CREATE TRIGGER update_shibpid_creationDate BEFORE UPDATE ON shibpid FOR EACH ROW
 SQL
 	epass="$pw"
 fi
-
-mkdir -p "$downloaddir"
-
-fetchurl shibboleth-identityprovider-${shibVer}-bin.zip "http://shibboleth.net/downloads/identity-provider/${shibVer}/shibboleth-identityprovider-${shibVer}-bin.zip"
 
 pass="foo"
 if [[ "${upgrade}" -eq 0 ]]; then
