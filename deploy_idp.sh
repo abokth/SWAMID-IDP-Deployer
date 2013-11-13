@@ -804,7 +804,7 @@ if [[ "${upgrade}" -eq 0 ]]; then
 		| perl -npe "s#TrUsTsToRe#${javaCAcerts}#" \
 		| perl -npe "s#/opt/shibboleth-idp#$installdir#" \
 		> "$serverxmltmp"
-	xmlcheck "$serverxmltmp"
+	#xmlcheck "$serverxmltmp"
 fi
 
 cd "$builddir"
