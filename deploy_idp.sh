@@ -1396,10 +1396,10 @@ CustomLog logs/shibboleth-idp-ssl_request_log \
 
 <IfModule mod_proxy_ajp.c>
     ProxyRequests Off
-    <Proxy ajp://localhost4.localdomain4:8009>
+    <Proxy ajp://127.0.0.1:8009>
         Allow from all
     </Proxy>
-    ProxyPass /idp ajp://localhost4.localdomain4:8009/idp retry=5
+    ProxyPass /idp ajp://127.0.0.1:8009/idp retry=5
 </IfModule>
 
 Redirect / https://www.$schachomeorganization/
