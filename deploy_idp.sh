@@ -363,7 +363,7 @@ prep="prep/${type}"
 
 text_input ldapserver "LDAP server" "Please input yout LDAP server names (ldap.xxx.yy).\n\nSeparate multiple servers with spaces.\SSL (LDAPS) will be required." "ldap.${Dname}"
 
-ldapurls=$(for s in $ldapserver; do echo "ldaps://$s"; done)
+ldapurls=$(for s in $ldapserver; do echo "ldaps://$s"; done|tr '\n' ' '|sed 's, $,,;')
 
 text_input ldapbasedn "LDAP base DN" "Please input your LDAP base DN" $(sed <<<"$schachomeorganization" -re 's:^:dc=:g; s:\.:,dc=:g;')
 text_input ldapbinddn "LDAP bind DN" "Please input your LDAP bind DN" "uid=shibbolethserver,ou=Special Users,$ldapbasedn"
