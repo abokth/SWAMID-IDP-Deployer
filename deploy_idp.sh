@@ -1153,6 +1153,17 @@ fi
 
 cp "${Spath}/config" "$installdir"/deploy-config
 
+for f in "${Spath}"/files/metadata/*.xml; do
+    if [[ -e "$f" ]]; then
+	xmlcheck "$f"
+	installf="$installdir"/metadata/"$(basename "$f")"
+	if [[ ! -e "$installf" ]] || ! cmp -s "$f" "$installf"; then
+	    cp "$f" "$installf".new
+	    mv "$installf".new "$installf"
+	fi
+    fi
+done
+
 pushd >/dev/null "$opttmp/conf-build/idp"/conf-tmpl
 for f in *.xml; do
 	sed <"$f" >"$installdir/conf/$f.new" -e "$filtertokens"
