@@ -281,20 +281,6 @@
 -->
 
 
-    <!-- release norEduPersonNIN to antagning.se -->
-    <afp:AttributeFilterPolicy id="studeraNU">
-	<afp:PolicyRequirementRule xsi:type="basic:OR">
-            <basic:Rule xsi:type="basic:AttributeRequesterString" value="https://www.antagning.se/aws-sp" />
-            <basic:Rule xsi:type="basic:AttributeRequesterString" value="https://www.antagning.se/ecs-sp" />
-            <basic:Rule xsi:type="basic:AttributeRequesterString" value="https://www.universityadmissions.se/aws-sp-en" />
-	</afp:PolicyRequirementRule>
-
-	<afp:AttributeRule attributeID="norEduPersonNIN">
-            <afp:PermitValueRule xsi:type="basic:ANY" />
-	</afp:AttributeRule>
-    </afp:AttributeFilterPolicy>
-
-
     <!-- Release to testshib.org -->
 <!--
     <afp:AttributeFilterPolicy id="testShib">
