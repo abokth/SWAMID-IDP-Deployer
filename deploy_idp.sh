@@ -370,7 +370,6 @@ text_input ldapbinddn "LDAP bind DN" "Please input your LDAP bind DN" "uid=shibb
 if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
 	ldappass=$(sed <"$installdir"/conf/attribute-resolver.properties -nre 's,^myldap\.password *= *,,p;')
 fi
-text_input ldappass "LDAP bind password" "Please input your LDAP bind pasword" ""
 defaultyes_input subsearch "LDAP Subsearch" "Do you want to enable LDAP subtree search?"
 text_input ninc "LDAP norEduPersonNIN source attribute" "Please specify the LDAP sourc attribute for the norEduPersonNIN value (Should have the format YYYYMMDDnnnn)" "norEduPersonNIN"
 
@@ -496,7 +495,7 @@ tmpfiles[${#tmpfiles[@]}]="${Spath}/config.tmp"
 if [[ -e "${Spath}/config" ]] && cmp -s "${Spath}/config"{,.tmp}; then
 	: "No configuration changes."
 else
-	defaultyes_input saveconfig "Save config" "Do you want to save these config values?\n\nIf you save these values the current config file will be overwritten.\n NOTE: No passwords will be saved."
+	defaultyes_input saveconfig "Save config" "Do you want to save these config values?\n\nIf you save these values the current config file will be overwritten."
 	[[ "$saveconfig" == "y" ]]
 	mv "${Spath}/config"{.tmp,}
 	software_changes=yes
@@ -1130,6 +1129,9 @@ if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}" ]]; then
 	fi
 	mv "$opttmp/shibboleth-identityprovider-${shibVer}" "$builddir"
 fi
+
+# Do this late to reduce the risk of having to ask again if something fails.
+text_input ldappass "LDAP bind password" "Please input the bind password for LDAP\n  $ldapbinddn" ""
 
 if [[ -e "$installdir" ]]; then
 	bupFile="$(mktemp -d)/backup-shibboleth-idp.${ts}.tar.gz"
