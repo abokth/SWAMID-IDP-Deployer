@@ -361,7 +361,7 @@ fi
 menu_input type "Authentication type" "Which authentication method do you want to use?" 2 cas "Central Authentication Service" ldap "Username/Password Authentication with LDAP"
 prep="prep/${type}"
 
-text_input ldapserver "LDAP server" "Please input yout LDAP server names (ldap.xxx.yy).\n\nSeparate multiple servers with spaces.\SSL (LDAPS) will be required." "ldap.${Dname}"
+text_input ldapserver "LDAP server" "Please input your LDAP server names (ldap.xxx.yy).\n\nSeparate multiple servers with spaces.\SSL (LDAPS) will be required." "ldap.${Dname}"
 
 ldapurls=$(for s in $ldapserver; do echo "ldaps://$s"; done|tr '\n' ' '|sed 's, $,,;')
 
