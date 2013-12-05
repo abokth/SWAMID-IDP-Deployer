@@ -1318,10 +1318,19 @@ if [[ "${appserv}" = "tomcat" ]]; then
 
 	chgrp -R $tomcatgroup "$installdir"/metadata
 	chmod -R 770 "$installdir"/metadata
+
+	idplogdir=/usr/share/tomcat6/logs/shibboleth-idp
+	mkdir -p "$idplogdir"
+	chgrp -R $tomcatgroup "$idplogdir"
+	chmod 770 "$idplogdir"
 	
-	chgrp -R $tomcatgroup "$installdir"/logs/
-	chmod 770 "$installdir"/logs
-	
+	if [[ ! -L "$installdir"/logs ]]; then
+	    if [[ -e "$installdir"/logs ]]; then
+		mv "$installdir"/logs "$installdir"/logs.old
+	    fi
+	    ln -s "$idplogdir" "$installdir"/logs
+	fi
+		
 	chgrp -R $tomcatgroup "$installdir"/conf/*.properties
 	chmod 640 "$installdir"/conf/*.properties
 	
@@ -1448,8 +1457,6 @@ if [[ "${upgrade}" -eq 0 ]]; then
 		echo " /root/certs/.../install-localhost-chain-in-java-keystore"
 	fi
 fi
-echo "Logs are in:"
-echo "*" /usr/share/tomcat6/logs
-echo "*" $installdir/logs
+echo "Logs are in: /usr/share/tomcat6/logs/"
 echo ""
 
