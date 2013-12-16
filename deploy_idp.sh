@@ -563,7 +563,7 @@ required, select a suitable version using 'alternatives --config java'."
 
 	if [[ "${fticks}" == "y" ]]; then
 		# We also need the JDK
-		if ! javac -version 2>&1 | egrep -q '^javac "1\.(6|7|8|9|[0-9][0-9]+)'; then
+		if ! javac -version 2>&1 | egrep -q '^javac 1\.(6|7|8|9|[0-9][0-9]+)'; then
 			rpm -q >/dev/null 2>&1 java-1.7.0-openjdk-devel || yum install java-1.7.0-openjdk-devel || :
 			if ! javac -version 2>&1 | egrep -q '^javac "1\.(6|7|8|9|1[0-9]+)'; then
 				errx \
