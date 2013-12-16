@@ -562,6 +562,18 @@ required, select a suitable version using 'alternatives --config java'."
 	fi
 
 	if [[ "${fticks}" == "y" ]]; then
+		# We also need the JDK
+		if ! javac -version 2>&1 | egrep -q '^javac "1\.(6|7|8|9|[0-9][0-9]+)'; then
+			rpm -q >/dev/null 2>&1 java-1.7.0-openjdk-devel || yum install java-1.7.0-openjdk-devel || :
+			if ! javac -version 2>&1 | egrep -q '^javac "1\.(6|7|8|9|1[0-9]+)'; then
+				errx \
+"Java JDK 1.6 or newer required. Install java-1.7.0-openjdk-devel or similar. For
+RHEL6, other JVMs are also available in the extra repositories (enable
+them i RHN). Check current JDK version with 'javac -version', and if
+required, select a suitable version using 'alternatives --config javac'."
+			fi
+		fi
+
 		rpm -q >/dev/null 2>&1 git || yum install git
 	fi
 
@@ -578,6 +590,7 @@ required, select a suitable version using 'alternatives --config java'."
 			rpm -q >/dev/null 2>&1 postgresql-server || yum install postgresql-server
 		fi
 		rpm -q >/dev/null 2>&1 postgresql-jdbc || yum install postgresql-jdbc
+		rpm -q >/dev/null 2>&1 postgresql || yum install postgresql
 	fi
 fi
 
@@ -620,10 +633,9 @@ createuser --no-superuser --no-createdb --no-createrole $db_user
 createdb --owner $db_user $db_name
 psql -c "ALTER ROLE $db_user WITH PASSWORD '$pw';"
 EOCMD
-/bin/su - postgres -c 'echo >>$PGDATA/pg_hba.conf ""'
-/bin/su - postgres -c 'echo >>$PGDATA/pg_hba.conf "hostssl $db_name $db_user samenet md5"'
-/bin/su - postgres -c 'echo >>$PGDATA/pg_hba.conf "hostssl $db_name $db_user samenet md5"'
-/bin/su - postgres -c 'echo >>$PGDATA/pg_hba.conf ""'
+/bin/su - postgres -c 'echo >>\$PGDATA/pg_hba.conf ""'
+/bin/su - postgres -c 'echo >>\$PGDATA/pg_hba.conf "hostssl $db_name $db_user samenet md5"'
+/bin/su - postgres -c 'echo >>\$PGDATA/pg_hba.conf ""'
 service postgresql restart
 ###############
 
@@ -917,7 +929,10 @@ if [[ "${fticks}" == "y" ]]; then
 		tar xf "$downloaddir"/ndn-shib-fticks-$fticks_commit.tar.gz
 		mv ndn-shib-fticks-$fticks_commit "$builddir"
 		cd "$builddir"/ndn-shib-fticks-$fticks_commit
-		mvn
+		if ! mvn; then
+		    rm -rf "$builddir"/ndn-shib-fticks-$fticks_commit
+		    exit 1
+		fi
 		software_changes=yes
 	fi
 fi
