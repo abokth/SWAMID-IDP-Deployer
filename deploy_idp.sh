@@ -449,6 +449,8 @@ Usage data to SWAMID:      ${fticks}
 Logos:                     ${pnglogo}
                            ${pngmobilelogo}
                            ${pngfederationlogo}
+
+Extra filter tokens:       ${extra_filter_tokens}
 EOM
 
 if [[ "${GUIen}" = "y" && "$doinstall" != "y" ]]; then
@@ -489,6 +491,7 @@ uapprove_db_user="$uapprove_db_user"
 pnglogo="$pnglogo"
 pngmobilelogo="$pngmobilelogo"
 pngfederationlogo="$pngfederationlogo"
+extra_filter_tokens="$extra_filter_tokens"
 EOM
 tmpfiles[${#tmpfiles[@]}]="${Spath}/config.tmp"
 
@@ -749,6 +752,10 @@ if [[ "${uapprove}" == "y" ]]; then
 	filtertokens="$filtertokens s,<!-- %%%%enable_uapprove%%%%,<!-- enable_uapprove -->,g;"
 	filtertokens="$filtertokens s,%%%%enable_uapprove%%%% -->,<!-- /enable_uapprove -->,g;"
 fi
+for x_filter_token in $extra_filter_tokens; do
+	filtertokens="$filtertokens s,<!-- %%%%${x_filter_token}%%%%,<!-- ${x_filter_token} -->,g;"
+	filtertokens="$filtertokens s,%%%%${x_filter_token}%%%% -->,<!-- /${x_filter_token} -->,g;"
+done
 
 idp_config_patch_tmp=$(mktemp)
 tmpfiles[${#tmpfiles[@]}]="$idp_config_patch_tmp"
