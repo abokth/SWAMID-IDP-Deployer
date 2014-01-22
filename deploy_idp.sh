@@ -1176,6 +1176,12 @@ if [[ -n "$software_changes" ]]; then
 	else
 		echo "Running Shibboleth installer in install mode..."
 		sh install.sh -Didp.home.input="$installdir" -Didp.hostname.input="${certCN}" -Didp.keystore.pass="${pass}"
+
+		if [[ "${idpurl}/idp/shibboleth" != "${entityid}" ]]; then
+		    echo "Fixing up generated metadata..."
+		    escapedbadentityid="${idpurl//./\.}/idp/shibboleth"
+		    sed -i "$installdir"/metadata/idp-metadata.xml -re 's, entityID="'"${escapedbadentityid}"'", entityid="'"${goodentityid}"'",;'
+		fi
 	fi
 fi
 
