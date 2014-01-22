@@ -1180,7 +1180,7 @@ if [[ -n "$software_changes" ]]; then
 		if [[ "${idpurl}/idp/shibboleth" != "${entityid}" ]]; then
 		    echo "Fixing up generated metadata..."
 		    escapedbadentityid="${idpurl//./\.}/idp/shibboleth"
-		    sed -i "$installdir"/metadata/idp-metadata.xml -re 's, entityID="'"${escapedbadentityid}"'", entityid="'"${goodentityid}"'",;'
+		    sed -i "$installdir"/metadata/idp-metadata.xml -re 's, entityID="'"${escapedbadentityid}"'", entityid="'"${entityid}"'",;'
 		fi
 	fi
 fi
