@@ -376,6 +376,9 @@ text_input ninc "LDAP norEduPersonNIN source attribute" "Please specify the LDAP
 text_input idpurl "IDP URL" "Please input the URL to reach this IDP" "https://${FQDN}"
 idpurl="${idpurl%/}"
 
+defentityid=$(sed <<<"${idpurl}/idp/shibboleth" -re 's,-[0-9]+\.,.,; s,[0-9]+\.,.,;')
+text_input entityid "IDP URL" "Please input the entityID for this IDP" "$defentityid"
+
 t="${idpurl#*://}"
 idphostname="${t%/*}"
 
@@ -430,6 +433,7 @@ LDAP Bind DN:              ${ldapbinddn}
 LDAP Subsearch:            ${subsearch}
 norEduPersonNIN:           ${ninc}
 
+IDP EntityID:              ${entityid}
 IDP URL:                   ${idpurl}
 CAS Login URL:             ${caslogurl}
 CAS URL:                   ${casurl}
@@ -469,6 +473,7 @@ ldapserver="$ldapserver"
 ldapbasedn="$ldapbasedn"
 ldapbinddn="$ldapbinddn"
 subsearch="$subsearch"
+entityid="$entityid"
 idpurl="$idpurl"
 caslogurl="$caslogurl"
 casurl="$casurl"
@@ -723,13 +728,14 @@ EOF
 }
 
 filtertokens="$filtertokens s:\\\$IDP_HOME\\\$:$installdir:g;"
-filtertokens="$filtertokens s,\\\$IDP_ENTITY_ID\\\$,$idpurl/idp/shibboleth,g;"
+filtertokens="$filtertokens s,\\\$IDP_ENTITY_ID\\\$,$entityid,g;"
 filtertokens="$filtertokens s:\\\$IDP_SCOPE\\\$:$scope:g;"
 filtertokens="$filtertokens s:\\\$IDP_CERTIFICATE\\\$:$installdir/credentials/idp.crt:g;"
 filtertokens="$filtertokens s:\\\$IDP_HOSTNAME\\\$:$idphostname:g;"
 
 filtertokens="$filtertokens s,%%%%LDAPURLS%%%%,$ldapurls,g;"
 filtertokens="$filtertokens s@%%%%LDAPBASEDN%%%%@$ldapbasedn@g;"
+filtertokens="$filtertokens s,%%%%ENTITYID%%%%,$entityid,g;"
 filtertokens="$filtertokens s,%%%%IDPURL%%%%,$idpurl,g;"
 filtertokens="$filtertokens s,%%%%CASURL%%%%,$casurl,g;"
 filtertokens="$filtertokens s,%%%%CASLOGINURL%%%%,$caslogurl,g;"
