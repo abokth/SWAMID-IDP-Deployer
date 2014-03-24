@@ -1449,6 +1449,46 @@ CustomLog logs/shibboleth-idp-ssl_request_log \
 
 Redirect / https://www.$schachomeorganization/
 </VirtualHost>
+
+Listen 8443
+<VirtualHost $idphostname:8443>
+ErrorLog logs/shibboleth-idp-ssl_error_log
+TransferLog logs/shibboleth-idp-ssl_access_log
+LogLevel warn
+SSLEngine on
+SSLProtocol all -SSLv2
+SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
+SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+EOF
+	if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
+		cat >>"$httpdconftmp" <<EOF
+SSLCertificateChainFile /etc/pki/tls/certs/server-chain.crt
+EOF
+	fi
+	cat >>"$httpdconftmp" <<EOF
+<Files ~ "\.(cgi|shtml|phtml|php3?)$">
+    SSLOptions +StdEnvVars
+</Files>
+<Directory "/var/www/cgi-bin">
+    SSLOptions +StdEnvVars
+</Directory>
+SetEnvIf User-Agent ".*MSIE.*" \
+         nokeepalive ssl-unclean-shutdown \
+         downgrade-1.0 force-response-1.0
+CustomLog logs/shibboleth-idp-ssl_request_log \
+          "%t %h %{SSL_PROTOCOL}x %{SSL_CIPHER}x \"%r\" %b"
+
+<IfModule mod_proxy_ajp.c>
+    ProxyRequests Off
+    <Proxy ajp://127.0.0.1:8009>
+        Allow from all
+    </Proxy>
+    ProxyPass /idp ajp://127.0.0.1:8009/idp retry=5
+</IfModule>
+
+Redirect / https://www.$schachomeorganization/
+</VirtualHost>
 EOF
 	if [[ -d /etc/httpd/conf.d ]]; then
 		cp "$httpdconftmp" /etc/httpd/conf.d/zz-80-shibboleth-idp.conf
