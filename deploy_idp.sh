@@ -318,7 +318,7 @@ if [[ "$targetedid" == "y" ]]; then
 		esalt=$(cat "$persistentid_salt_file")
 	fi
 	if [[ -z "$esalt" && -e "$installdir"/conf/attribute-resolver.properties ]]; then
-		esalt=$(sed <"$installdir"/conf/attribute-resolver.properties -nre 's,^targetedid\.salt *= *,,p;')
+		esalt=$(native2ascii -reverse <"$installdir"/conf/attribute-resolver.properties | sed -nre 's,^targetedid\.salt *= *,,p;')
 		echo "$esalt" >"$persistentid_salt_file"
 	fi
 fi
@@ -368,7 +368,7 @@ ldapurls=$(for s in $ldapserver; do echo "ldaps://$s"; done|tr '\n' ' '|sed 's, 
 text_input ldapbasedn "LDAP base DN" "Please input your LDAP base DN" $(sed <<<"$schachomeorganization" -re 's:^:dc=:g; s:\.:,dc=:g;')
 text_input ldapbinddn "LDAP bind DN" "Please input your LDAP bind DN" "uid=shibbolethserver,ou=Special Users,$ldapbasedn"
 if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
-	ldappass=$(sed <"$installdir"/conf/attribute-resolver.properties -nre 's,^myldap\.password *= *,,p;')
+	ldappass=$(native2ascii -reverse <"$installdir"/conf/attribute-resolver.properties | sed -nre 's,^myldap\.password *= *,,p;')
 fi
 defaultyes_input subsearch "LDAP Subsearch" "Do you want to enable LDAP subtree search?"
 text_input ninc "LDAP norEduPersonNIN source attribute" "Please specify the LDAP sourc attribute for the norEduPersonNIN value (Should have the format YYYYMMDDnnnn)" "norEduPersonNIN"
@@ -784,7 +784,7 @@ for f in web.xml; do
 done
 
 if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
-	epass=$(sed <"$installdir"/conf/attribute-resolver.properties -nre 's,^targetedid\.jdbcpassword *= *,,p;')
+	epass=$(native2ascii -reverse <"$installdir"/conf/attribute-resolver.properties | sed -nre 's,^targetedid\.jdbcpassword *= *,,p;')
 fi
 if [[ -z "$epass" ]]; then
 	postgresql_db_create "$targetedid_db_host" "$targetedid_db_name" "$targetedid_db_user"
@@ -1227,60 +1227,60 @@ if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
 fi
 
 sed -i "$proptmp" -e '/^myldap\.url *=/d'
-echo "myldap.url = $ldapurls" >>"$proptmp"
+echo "myldap.url = $ldapurls" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^myldap\.basedn *=/d'
-echo "myldap.basedn = $ldapbasedn" >>"$proptmp"
+echo "myldap.basedn = $ldapbasedn" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^myldap\.binddn *=/d'
-echo "myldap.binddn = $ldapbinddn" >>"$proptmp"
+echo "myldap.binddn = $ldapbinddn" | native2ascii >>"$proptmp"
 
 if [[ -n "$ldappass" ]]; then
 	sed -i "$proptmp" -e '/^myldap\.password *=/d'
-	echo "myldap.password = $ldappass" >>"$proptmp"
+	echo "myldap.password = $ldappass" | native2ascii >>"$proptmp"
 fi
 
 sed -i "$proptmp" -e '/^myldap\.noredupersonninattr *=/d'
-echo "myldap.noredupersonninattr = $ninc" >>"$proptmp"
+echo "myldap.noredupersonninattr = $ninc" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^org\.o *=/d'
-echo "org.o = $certOrg" >>"$proptmp"
+echo "org.o = $certOrg" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^org\.c *=/d'
-echo "org.c = $certC" >>"$proptmp"
+echo "org.c = $certC" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^org\.co *=/d'
-echo "org.co = $certLongC" >>"$proptmp"
+echo "org.co = $certLongC" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^org\.noreduorgacronym *=/d'
-echo "org.noreduorgacronym = $certAcro" >>"$proptmp"
+echo "org.noreduorgacronym = $certAcro" | native2ascii >>"$proptmp"
 
 sed -i "$proptmp" -e '/^org\.schachomeorganization *=/d'
-echo "org.schachomeorganization = $schachomeorganization" >>"$proptmp"
+echo "org.schachomeorganization = $schachomeorganization" | native2ascii >>"$proptmp"
 
 if [[ "${targetedid}" == "y" ]]; then
 	if [[ -z "$esalt" ]]; then
 		esalt=$(mkpasswd -s 0 -l 58)
 		echo "$esalt" >"$persistentid_salt_file"
 	fi
-	echo "targetedid.salt = $esalt" >>"$proptmp"
+	echo "targetedid.salt = $esalt" | native2ascii >>"$proptmp"
 
 	sed -i "$proptmp" -e '/^targetedid\.jdbcdriver *=/d'
-	echo "targetedid.jdbcdriver = org.postgresql.Driver" >>"$proptmp"
+	echo "targetedid.jdbcdriver = org.postgresql.Driver" | native2ascii >>"$proptmp"
 
 	targetedidurl="jdbc:postgresql://$targetedid_db_host:5432/$targetedid_db_name?ssl=true"
 	if [[ "$targetedid_db_host" == "localhost" || "$targetedid_db_host" == "localhost.localdomain" ]]; then
 		targetedidurl="jdbc:postgresql://127.0.0.1:5432/$targetedid_db_name"
 	fi
 	sed -i "$proptmp" -e '/^targetedid\.jdbcurl *=/d'
-	echo "targetedid.jdbcurl = $targetedidurl" >>"$proptmp"
+	echo "targetedid.jdbcurl = $targetedidurl" | native2ascii >>"$proptmp"
 
 	sed -i "$proptmp" -e '/^targetedid\.jdbcusername *=/d'
-	echo "targetedid.jdbcusername = $targetedid_db_user" >>"$proptmp"
+	echo "targetedid.jdbcusername = $targetedid_db_user" | native2ascii >>"$proptmp"
 
 	if [[ -n "$epass" ]]; then
 		sed -i "$proptmp" -e '/^targetedid\.jdbcpassword *=/d'
-		echo "targetedid.jdbcpassword = $epass" >>"$proptmp"
+		echo "targetedid.jdbcpassword = $epass" | native2ascii >>"$proptmp"
 	fi
 fi
 
