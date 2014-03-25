@@ -327,6 +327,9 @@
 				  xmlns="urn:mace:shibboleth:2.0:resolver:ad" sourceAttributeID="${myldap.noredupersonninattr}">
         <resolver:Dependency ref="myLDAP" />
 
+        <resolver:DisplayName xml:lang="en">Swedish civic registration number</resolver:DisplayName>
+        <resolver:DisplayName xml:lang="sv">Personnummer</resolver:DisplayName>
+
         <resolver:AttributeEncoder xsi:type="enc:SAML1String"
 				 xmlns="urn:mace:shibboleth:2.0:attribute:encoder"
 				 name="urn:mace:dir:attribute-def:norEduPersonNIN" />
