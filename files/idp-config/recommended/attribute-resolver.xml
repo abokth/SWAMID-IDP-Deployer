@@ -550,7 +550,7 @@
               <Value>${org.o}</Value>
           </Attribute>
           <Attribute id="norEduOrgAcronym">
-              <Value>${org.noreduorgacronum}</Value>
+              <Value>${org.noreduorgacronym}</Value>
           </Attribute>
           <Attribute id="c">
               <Value>${org.c}</Value>
