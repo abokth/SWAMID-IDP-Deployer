@@ -499,6 +499,23 @@
         <resolver:AttributeEncoder xsi:type="enc:SAML2StringNameID" nameFormat="urn:oasis:names:tc:SAML:2.0:nameid-format:transient"/>
     </resolver:AttributeDefinition>
 
+
+
+
+
+    <!--                           -->
+    <!-- Various extra definitions -->
+    <!--                           -->
+
+    <resolver:AttributeDefinition id="schacDateOfBirth" xsi:type="ad:Simple"
+				  xmlns="urn:mace:shibboleth:2.0:resolver:ad" sourceAttributeID="norEduPersonBirthDate">
+        <resolver:Dependency ref="myLDAP" />
+        <resolver:AttributeEncoder xsi:type="enc:SAML1String" xmlns="urn:mace:shibboleth:2.0:attribute:encoder"
+				 name="urn:mace:terena.org:schac:attribute-def:schacDateOfBirth" />
+        <resolver:AttributeEncoder xsi:type="enc:SAML2String" xmlns="urn:mace:shibboleth:2.0:attribute:encoder"
+				 name="urn:oid:1.3.6.1.4.1.25178.1.2.3" friendlyName="schacDateOfBirth" />
+    </resolver:AttributeDefinition>
+
     <!-- ========================================== -->
     <!--      Data Connectors                       -->
     <!-- ========================================== -->
