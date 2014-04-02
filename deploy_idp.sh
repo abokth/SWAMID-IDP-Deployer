@@ -146,9 +146,15 @@ backup_file() {
 	fi
 }
 
+mktmp() {
+    local tmpvar="$1"; shift
+    local newtmpfile=$(mktemp "$@")
+    tmpfiles[${#tmpfiles[@]}]="$newtmpfile"
+    eval "tmpvar='$newtmpfile'"
+}
+
 quiet() {
-	outtmp=$(mktemp)
-	tmpfiles[${#tmpfiles[@]}]="$outtmp"
+	mktmp outtmp
 	if ! "$@" >"$outtmp" 2>&1; then
 		cat "$outtmp" >&2
 		errx "Command failed:" "$@"
@@ -201,6 +207,14 @@ if [[ -d "$installdir" ]]; then
 	upgrade=1
 fi
 
+whiptail_value() {
+    if [[ -z "$whiptailtmp" ]]; then
+	mktmp whiptailtmp
+    fi
+    whiptail --output-fd=10 10>"$whiptailtmp" "$@"
+    value=$(cat "$whiptailtmp")
+}
+
 text_input() {
 	local variable="$1"; shift
 	local title="$1"; shift
@@ -210,12 +224,7 @@ text_input() {
 
 	while eval [[ -z "\${$variable}" ]]; do
 		if [[ "${GUIen}" = "y" ]]; then
-			if [[ -z "$whiptailtmp" ]]; then
-				whiptailtmp=$(mktemp)
-				tmpfiles[${#tmpfiles[@]}]="$whiptailtmp"
-			fi
-			whiptail --output-fd=10 10>"$whiptailtmp" --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --inputbox --clear -- "$prompt" ${whipSize} "$default"
-			value=$(cat "$whiptailtmp")
+			whiptail_value --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --inputbox --clear -- "$prompt" ${whipSize} "$default"
 		else
 			echo "### $title ###"
 			echo -e "$prompt [$default] "
@@ -239,12 +248,7 @@ menu_input() {
 
 	if eval [[ -z "\${$variable}" ]]; then
 		if [[ "${GUIen}" = "y" ]]; then
-			if [[ -z "$whiptailtmp" ]]; then
-				whiptailtmp=$(mktemp)
-				tmpfiles[${#tmpfiles[@]}]="$whiptailtmp"
-			fi
-			whiptail --output-fd=10 10>"$whiptailtmp" --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --clear --menu "$prompt" ${whipSize} "$@" || :
-			value=$(cat "$whiptailtmp")
+			whiptail_value --backtitle "SWAMID IDP Deployer" --title "$title" --nocancel --clear --menu "$prompt" ${whipSize} "$@" || :
 		else
 			echo "### $title ###"
 			echo -e "$prompt"
@@ -414,8 +418,7 @@ if [[ "$targetedid" == "y" ]]; then
 	text_input targetedid_db_user "targetedid PostgreSQL DB user" "Please input the name of the targetedid DB user" "$targetedid_db_name"
 fi
 
-confirmtext=$(mktemp)
-tmpfiles[${#tmpfiles[@]}]="$confirmtext"
+mktmp confirmtext
 cat > "$confirmtext" << EOM
 Options passed to the installer:
 
@@ -657,8 +660,7 @@ EOF
 }
 
 mkdir -p "$builddir"
-opttmp=$(mktemp -d "$builddir"/shib-deploy-XXXXXX)
-tmpfiles[${#tmpfiles[@]}]="$opttmp"
+mktmp opttmp -d "$builddir"/shib-deploy-XXXXXX
 
 mkdir -p "$downloaddir"
 
@@ -688,8 +690,7 @@ xmlcheck() {
 	fi
 
 	if [[ -z "$schemadir" ]]; then
-		schemadir=$(mktemp -d)
-		tmpfiles[${#tmpfiles[@]}]="$schemadir"
+		mktmp schemadir -d
 		pushd >/dev/null "$schemadir"
 		for jar in "$idpdir"/lib/*.jar; do
 			jar -xf "$jar" schema org/springframework #javax/servlet/resources  org/apache/xml/security/resource/schema
@@ -763,8 +764,7 @@ for x_filter_token in $extra_filter_tokens; do
 	filtertokens="$filtertokens s,%%%%${x_filter_token}%%%% -->,<!-- /${x_filter_token} -->,g;"
 done
 
-idp_config_patch_tmp=$(mktemp)
-tmpfiles[${#tmpfiles[@]}]="$idp_config_patch_tmp"
+mktmp idp_config_patch_tmp
 cd ${Spath}/files/idp-config/recommended
 for f in attribute-filter.xml attribute-resolver.xml handler.xml logging.xml login.config relying-party.xml service.xml; do
 	if [[ "${f%.xml}" != "$f" ]] && fgrep xmlns: "../dist/$f" >/dev/null ; then
@@ -774,8 +774,7 @@ for f in attribute-filter.xml attribute-resolver.xml handler.xml logging.xml log
 	diff -uw "../dist/$f" "$f" >>"$idp_config_patch_tmp" || :
 done
 
-webapp_config_patch_tmp=$(mktemp)
-tmpfiles[${#tmpfiles[@]}]="$webapp_config_patch_tmp"
+mktmp webapp_config_patch_tmp
 cd ${Spath}/files/webapp-config/recommended
 for f in web.xml; do
 	#xmlcheck "../dist/$f"
@@ -819,8 +818,7 @@ if [[ "${upgrade}" -eq 0 ]]; then
 		genpw; httpspass="$pw"
 	fi
 
-	serverxmltmp=$(mktemp)
-	tmpfiles[${#tmpfiles[@]}]="$serverxmltmp"
+	mktmp serverxmltmp
 	cat ${Spath}/xml/server.xml.${appservconf} \
 		| perl -npe "s#ShIbBKeyPaSs#${pass}#" \
 		| perl -npe "s#HtTpSkEyPaSs#${httpspass}#" \
@@ -1008,8 +1006,7 @@ if [[ "${uapprove}" == "y" ]]; then
 		cp "$builddir"/uApprove-2.5.0/webapp/* "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/uApprove
 	fi
 
-	uapproveproperties=$(mktemp)
-	tmpfiles[${#tmpfiles[@]}]="$uapproveproperties"
+	mktmp uapproveproperties
 	cat "$builddir"/uApprove-2.5.0/manual/configuration/uApprove.properties >"$uapproveproperties"
 
 	escapedorgdomain="${schachomeorganization//./\.}"
@@ -1226,8 +1223,7 @@ if [[ -n "$uapproveproperties" ]]; then
 	chmod 640 "$installdir"/conf/uApprove.properties
 fi
 
-proptmp=$(mktemp)
-tmpfiles[${#tmpfiles[@]}]="$proptmp"
+mktmp proptmp
 if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
 	cat "$installdir"/conf/attribute-resolver.properties >"$proptmp"
 fi
@@ -1290,8 +1286,7 @@ if [[ "${targetedid}" == "y" ]]; then
 	fi
 fi
 
-sortedproptmp=$(mktemp)
-tmpfiles[${#tmpfiles[@]}]="$sortedproptmp"
+mktmp sortedproptmp
 sort -u "$proptmp" >"$sortedproptmp"
 
 if ! cmp -s "$installdir"/conf/attribute-resolver.properties "$sortedproptmp"; then
@@ -1414,8 +1409,7 @@ cat ${Spath}/xml/google.xml | perl -npe "s/GoOgLeDoMaIn/${googleDom}/" > "$insta
 xmlcheck "$installdir"/metadata/google.xml
 
 if [[ "$apachefrontend" == "y" ]]; then
-	httpdconftmp=$(mktemp)
-	tmpfiles[${#tmpfiles[@]}]="$httpdconftmp"
+	mktmp httpdconftmp
 	cat >"$httpdconftmp" <<EOF
 <VirtualHost $idphostname:443>
 ErrorLog logs/shibboleth-idp-ssl_error_log
