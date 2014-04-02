@@ -977,6 +977,12 @@ if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-IN
 	done
 	popd >/dev/null
 
+	if [[ -n "$pnglogo" && -z "$pngmobilelogo" ]]; then
+	    pngmobilelogo="$pnglogo"
+	fi
+	if [[ -n "$pngmobilelogo" && -z "$pnglogo" ]]; then
+	    pnglogo="$pngmobilelogo"
+	fi
 	if [[ -n "$pnglogo" ]]; then
 		pushd >/dev/null "${Spath}"
 		cp "$pnglogo" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/images/logo.png
