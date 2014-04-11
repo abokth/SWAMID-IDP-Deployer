@@ -150,7 +150,7 @@ mktmp() {
     local tmpvar="$1"; shift
     local newtmpfile=$(mktemp "$@")
     tmpfiles[${#tmpfiles[@]}]="$newtmpfile"
-    eval "tmpvar='$newtmpfile'"
+    eval "$tmpvar='$newtmpfile'"
 }
 
 quiet() {
