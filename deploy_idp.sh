@@ -776,7 +776,7 @@ done
 
 mktmp webapp_config_patch_tmp
 cd ${Spath}/files/webapp-config/recommended
-for f in web.xml; do
+for f in WEB-INF/web.xml; do
 	#xmlcheck "../dist/$f"
 	#xmlcheck "$f"
 	diff -uw "../dist/$f" "$f" >>"$webapp_config_patch_tmp" || :
@@ -965,8 +965,8 @@ pushd >/dev/null "$opttmp/conf-build/idp"/conf-tmpl
 quiet patch -F 5 <"$idp_config_patch_tmp"
 popd >/dev/null
 
-if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF ]]; then
-	pushd >/dev/null "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF
+if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp ]]; then
+	pushd >/dev/null "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp
 	quiet patch -F 5 <"$webapp_config_patch_tmp"
 	for f in web.xml; do
 		#xmlcheck "$f"
@@ -1188,6 +1188,8 @@ if [[ -n "$software_changes" ]]; then
 	fi
 fi
 
+chmod 640 $installdir/credentials/idp.key
+
 cp "${Spath}/config" "$installdir"/deploy-config
 
 for f in "${Spath}"/files/metadata/*.xml; do
@@ -1379,6 +1381,8 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		jar -xf ../idp.war.new
 		popd >/dev/null
 	fi
+
+	chgrp $tomcatgroup $installdir/credentials/idp.key
 fi
 
 fetchurl md-signer.crt.maybe-${mdSignerFinger} https://md.swamid.se/md/md-signer.crt
@@ -1458,8 +1462,8 @@ LogLevel warn
 SSLEngine on
 SSLProtocol all -SSLv2
 SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
-SSLCertificateFile /etc/pki/tls/certs/localhost.crt
-SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+SSLCertificateFile $installdir/credentials/idp.crt
+SSLCertificateKeyFile $installdir/credentials/idp.key
 EOF
 	if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
 		cat >>"$httpdconftmp" <<EOF
