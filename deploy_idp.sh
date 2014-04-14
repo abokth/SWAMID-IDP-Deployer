@@ -521,6 +521,15 @@ if [[ ! -e "$installdir"/deploy-config ]] || ! cmp -s "${Spath}/config" "$instal
 	software_changes=yes
 fi
 
+if [[ -z "$software_changes" ]]; then
+	for f in $(find "${Spath}"/files/{webapp,idp}-config -type f); do
+		if [[ -e "$f" && "$f" -nt "$installdir"/deploy-config ]]; then
+			software_changes=yes
+			break
+		fi
+	done
+fi
+
 defaultno_input doinstall "Confirm" "Do you want to install this IDP with these options?"
 [[ "$doinstall" == "y" ]]
 
