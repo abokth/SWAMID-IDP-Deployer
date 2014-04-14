@@ -62,6 +62,9 @@ errx() {
 	exit 1
 }
 
+cdpush() { pushd >/dev/null "$@"; }
+cdpop() { popd >/dev/null; }
+
 restore_bup() {
 	if [[ -n "$bupFile" && -e "$bupFile" ]]; then
 		if [[ -e "$installdir" ]]; then
@@ -691,7 +694,7 @@ xmlcheck() {
 
 	if [[ -z "$schemadir" ]]; then
 		mktmp schemadir -d
-		pushd >/dev/null "$schemadir"
+		cdpush "$schemadir"
 		for jar in "$idpdir"/lib/*.jar; do
 			jar -xf "$jar" schema org/springframework #javax/servlet/resources  org/apache/xml/security/resource/schema
 		done
@@ -720,7 +723,7 @@ EOF
 EOF
 		#cat schema.xsd
 		#ls -al
-		popd >/dev/null
+		cdpop
 	fi
 
 	if ! xmllint --nonet --xinclude --nowarning --noout --path "$schemadir" --schema "$schemadir"/schema.xsd "$@"; then
@@ -772,14 +775,6 @@ for f in attribute-filter.xml attribute-resolver.xml handler.xml logging.xml log
 		xmlcheck "$f"
 	fi
 	diff -uw "../dist/$f" "$f" >>"$idp_config_patch_tmp" || :
-done
-
-mktmp webapp_config_patch_tmp
-cd ${Spath}/files/webapp-config/recommended
-for f in WEB-INF/web.xml; do
-	#xmlcheck "../dist/$f"
-	#xmlcheck "$f"
-	diff -uw "../dist/$f" "$f" >>"$webapp_config_patch_tmp" || :
 done
 
 if [[ -e "$installdir"/conf/attribute-resolver.properties ]]; then
@@ -961,19 +956,17 @@ else
 	cp -a "$builddir/shibboleth-identityprovider-${shibVer}"/src/installer/resources/conf-tmpl "$opttmp/conf-build/idp/conf-tmpl"
 fi
 
-pushd >/dev/null "$opttmp/conf-build/idp"/conf-tmpl
+cdpush "$opttmp/conf-build/idp"/conf-tmpl
 quiet patch -F 5 <"$idp_config_patch_tmp"
-popd >/dev/null
+cdpop
 
 if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp ]]; then
-	pushd >/dev/null "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp
-	quiet patch -F 5 <"$webapp_config_patch_tmp"
-	for f in web.xml; do
-		#xmlcheck "$f"
-		sed -e "$filtertokens" -i "$f"
-		#xmlcheck "$f"
+	mktmp webapptmp
+	for f in WEB-INF/web.xml; do
+		diff -uw "${Spath}"/files/webapp-config/{dist,recommended}/"$f" >"$webapptmp" || :
+		quiet patch -F 5 <"$webapptmp" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+		sed -e "$filtertokens" -i "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
 	done
-	popd >/dev/null
 
 	if [[ -n "$pnglogo" && -z "$pngmobilelogo" ]]; then
 	    pngmobilelogo="$pnglogo"
@@ -982,19 +975,19 @@ if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp ]]; th
 	    pnglogo="$pngmobilelogo"
 	fi
 	if [[ -n "$pnglogo" ]]; then
-		pushd >/dev/null "${Spath}"
+		cdpush "${Spath}"
 		cp "$pnglogo" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/images/logo.png
-		popd >/dev/null
+		cdpop
 	fi
 	if [[ -n "$pngmobilelogo" ]]; then
-		pushd >/dev/null "${Spath}"
+		cdpush "${Spath}"
 		cp "$pngmobilelogo" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/images/mobilelogo.png
-		popd >/dev/null
+		cdpop
 	fi
 	if [[ -n "$pngfederationlogo" ]]; then
-		pushd >/dev/null "${Spath}"
+		cdpush "${Spath}"
 		cp "$pngfederationlogo" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/images/federation-logo.png
-		popd >/dev/null
+		cdpop
 	fi
 fi
 
@@ -1097,7 +1090,7 @@ fi
 
 if [[ "${upgrade}" -eq 0 ]]; then
 
-	pushd >/dev/null $(mktemp -d)
+	cdpush $(mktemp -d)
 	tmpfiles[${#tmpfiles[@]}]="$PWD"
 
 	env LC_ALL=en_US.UTF-8 keytool -keystore "$javaCAcerts" -storepass changeit -list | fgrep -B 1 trustedCertEntry | fgrep fingerprint >trusted || :
@@ -1147,7 +1140,7 @@ $line"
 		done
 	fi
 
-	popd >/dev/null
+	cdpop
 fi
 
 if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}" ]]; then
@@ -1203,7 +1196,7 @@ for f in "${Spath}"/files/metadata/*.xml; do
     fi
 done
 
-pushd >/dev/null "$opttmp/conf-build/idp"/conf-tmpl
+cdpush "$opttmp/conf-build/idp"/conf-tmpl
 for f in *.xml; do
 	sed <"$f" >"$installdir/conf/$f.new" -e "$filtertokens"
 	if fgrep xmlns: "$f" >/dev/null ; then
@@ -1214,7 +1207,7 @@ for f in *.xml; do
 		mv "$installdir/conf/$f.new" "$installdir/conf/$f"
 	fi
 done
-popd >/dev/null
+cdpop
 
 if [[ -n "$uapproveproperties" ]]; then
 	#xmlcheck "$builddir"/uApprove-2.5.0/manual/configuration/uApprove.xml
@@ -1377,9 +1370,9 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		chmod 640 /usr/share/tomcat6/webapps/idp.war.new
 		rm -rf /usr/share/tomcat6/webapps/idp.new
 		mkdir /usr/share/tomcat6/webapps/idp.new
-		pushd >/dev/null /usr/share/tomcat6/webapps/idp.new
+		cdpush /usr/share/tomcat6/webapps/idp.new
 		jar -xf ../idp.war.new
-		popd >/dev/null
+		cdpop
 	fi
 
 	chgrp $tomcatgroup $installdir/credentials/idp.key
