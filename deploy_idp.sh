@@ -49,6 +49,8 @@ HELP="
 set -e
 set -o pipefail
 
+umask 022
+
 declare -a tmpfiles
 cleanup() {
 	rm -rf "${tmpfiles[@]}"
@@ -962,11 +964,21 @@ cdpop
 
 if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp ]]; then
 	mktmp webapptmp
-	for f in WEB-INF/web.xml; do
-		diff -uw "${Spath}"/files/webapp-config/{dist,recommended}/"$f" >"$webapptmp" || :
-		quiet patch -F 5 <"$webapptmp" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
-		sed -e "$filtertokens" -i "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+	cdpush "${Spath}"/files/webapp-config/recommended
+	for f in $(find . -type f); do
+		if file --brief "$f" | egrep ' text($|,)'; then
+			if [[ -e "${Spath}"/files/webapp-config/dist/"$f" && -e "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f" ]]; then
+				diff -uw "${Spath}"/files/webapp-config/{dist,recommended}/"$f" >"$webapptmp" || :
+				quiet patch -F 5 <"$webapptmp" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+			else
+				cp "${Spath}"/files/webapp-config/recommended/"$f" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+			fi
+			sed -e "$filtertokens" -i "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+		else
+			cp "${Spath}"/files/webapp-config/recommended/"$f" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/"$f"
+		fi
 	done
+	cdpop
 
 	if [[ -n "$pnglogo" && -z "$pngmobilelogo" ]]; then
 	    pngmobilelogo="$pnglogo"
