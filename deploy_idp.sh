@@ -1198,6 +1198,7 @@ if [[ -n "$software_changes" ]]; then
 		    echo "Fixing up generated metadata..."
 		    escapedbadentityid="${idpurl//./\.}/idp/shibboleth"
 		    sed -i "$installdir"/metadata/idp-metadata.xml -re 's, entityID="'"${escapedbadentityid}"'", entityID="'"${entityid}"'",;'
+		    sed -i "$installdir"/metadata/idp-metadata.xml -re 's,<shibmd:Scope regexp="false">[a-z0-9\.]+</shibmd:Scope>,<shibmd:Scope regexp="false">'"${scope}"'</shibmd:Scope>,g;'
 		fi
 	fi
 fi
