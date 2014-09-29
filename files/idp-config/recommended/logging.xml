@@ -84,8 +84,8 @@
         <port>514</port>
         <facility>DAEMON</facility>
         <!-- includes the last 8 chars of the servlet (32 chars) and saml (64 chars) session ids -->
-        <suffixPattern  >shibboleth-idp: %16thread %5level [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] %logger{20} %msg</suffixPattern>
-        <stackTracePattern>shibboleth-idp: %16thread       [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] &gt;</stackTracePattern>
+        <suffixPattern>shibboleth-idp: %16.16thread %5.5level [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] %logger{20} %msg</suffixPattern>
+        <stackTracePattern>shibboleth-idp: %16.16thread       [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] &gt;</stackTracePattern>
     </appender>
 
     <logger name="Shibboleth-Access" level="ALL">
