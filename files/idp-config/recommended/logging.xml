@@ -76,10 +76,16 @@
     </appender>
   
     <appender name="IDP_SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
-        <SyslogHost>127.0.0.1</SyslogHost>
-        <Port>514</Port>
-        <Facility>AUTH</Facility>
-        <SuffixPattern>[%logger:%line] %msg</SuffixPattern>
+<!-- remember to include  -->
+<!--   $ModLoad imudp.so  -->
+<!--   $UDPServerRun 514  -->
+<!-- in your rsyslog.conf -->
+        <syslogHost>127.0.0.1</syslogHost>
+        <port>514</port>
+        <facility>DAEMON</facility>
+        <!-- includes the last 8 chars of the servlet (32 chars) and saml (64 chars) session ids -->
+        <suffixPattern  >shibboleth-idp: %16thread %5level [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] %logger{20} %msg</suffixPattern>
+        <stackTracePattern>shibboleth-idp: %16thread       [%39mdc{clientIP} %8.8mdc{JSESSIONID} %8.8mdc{idpSessionId}] &gt;</stackTracePattern>
     </appender>
 
     <logger name="Shibboleth-Access" level="ALL">
