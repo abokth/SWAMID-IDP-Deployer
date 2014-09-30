@@ -1337,20 +1337,45 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		ln -s "$downloaddir"/tomcat6-dta-ssl-1.0.0.jar /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar 
 	fi
 
+	javaopts=""
+
 	if [[ -e /etc/default/tomcat6 ]]; then
-		. /etc/default/tomcat6
-		if ! fgrep <<<"$JAVA_OPTS" >/dev/null /usr/share/tomcat6/endorsed; then
-			JAVA_OPTS="${JAVA_OPTS} -Djava.endorsed.dirs=/usr/share/tomcat6/endorsed"
-			echo "JAVA_OPTS=\"${JAVA_OPTS}\"" >> /etc/default/tomcat6
+		mktmp tomcatconftmp
+		cat /etc/default/tomcat6 >"$tomcatconftmp"
+		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
+			echo 'JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"' >> "$tomcatconftmp"
+		else
+			sed -i "$tomcatconftmp" -e 's,^JAVA_OPTS=.*$,JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'",;'
 		fi
-		if [[ "${AUTHBIND}" != "yes" ]]; then
-			echo "AUTHBIND=yes" >> /etc/default/tomcat6
+		if ! grep '^AUTHBIND=' "$tomcatconftmp" >/dev/null; then
+			echo "AUTHBIND=yes" >> "$tomcatconftmp"
+		else
+			sed -i "$tomcatconftmp" -e 's,^AUTHBIND=.*$,AUTHBIND=yes,;'
+		fi
+		if ! cmp -s /etc/default/tomcat6 "$tomcatconftmp"; then
+			cp "$tomcatconftmp" /etc/default/tomcat6.new
+			mv /etc/default/tomcat6{.new,}
+			restorecon /etc/default/tomcat6 >/dev/null 2>&1 || :
 		fi
 	fi
 
 	if [[ -e /etc/sysconfig/tomcat6 ]]; then
-		if ! fgrep JAVA_ENDORSED_DIRS /etc/sysconfig/tomcat6 >/dev/null; then
-			echo "JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed" >> /etc/sysconfig/tomcat6
+		mktmp tomcatconftmp
+		cat /etc/sysconfig/tomcat6 >"$tomcatconftmp"
+		if ! grep '^JAVA_ENDORSED_DIRS=' "$tomcatconftmp" >/dev/null; then
+			echo "JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed" >> "$tomcatconftmp"
+		else
+			sed -i "$tomcatconftmp" -e 's,^JAVA_ENDORSED_DIRS=.*$,JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed,;'
+		fi
+		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
+			echo 'JAVA_OPTS="'"$javaopts"'"' >> "$tomcatconftmp"
+		else
+			sed -i "$tomcatconftmp" -e 's,^JAVA_OPTS=.*$,JAVA_OPTS="'"$javaopts"'",;'
+		fi
+		if ! cmp -s /etc/sysconfig/tomcat6 "$tomcatconftmp"; then
+			cp "$tomcatconftmp" /etc/sysconfig/tomcat6.new
+			mv /etc/sysconfig/tomcat6{.new,}
+			restorecon /etc/sysconfig/tomcat6 >/dev/null 2>&1 || :
 		fi
 	fi
 
