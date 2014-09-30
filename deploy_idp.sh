@@ -1356,6 +1356,7 @@ if [[ "${appserv}" = "tomcat" ]]; then
 			cp "$tomcatconftmp" /etc/default/tomcat6.new
 			mv /etc/default/tomcat6{.new,}
 			restorecon /etc/default/tomcat6 >/dev/null 2>&1 || :
+			tomcat_opts_changes=yes
 		fi
 	fi
 
@@ -1376,6 +1377,7 @@ if [[ "${appserv}" = "tomcat" ]]; then
 			cp "$tomcatconftmp" /etc/sysconfig/tomcat6.new
 			mv /etc/sysconfig/tomcat6{.new,}
 			restorecon /etc/sysconfig/tomcat6 >/dev/null 2>&1 || :
+			tomcat_opts_changes=yes
 		fi
 	fi
 
@@ -1552,6 +1554,8 @@ if [[ "${appserv}" = "tomcat" ]]; then
 			#mv "$tomcatconfdir"/Catalina/localhost/idp.xml{.new,}
 		fi
 		service tomcat6 start
+	elif [[ "$tomcat_opts_changes" == "yes" ]]; then
+		service tomcat6 restart
 	fi
 fi
 
