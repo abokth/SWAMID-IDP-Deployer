@@ -1337,7 +1337,8 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		ln -s "$downloaddir"/tomcat6-dta-ssl-1.0.0.jar /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar 
 	fi
 
-	javaopts=""
+	# https://access.redhat.com/labs/jvmconfig/#/?jv=Open&c=lowPause&hs=2560&gl=1&lp=1&de=1&dc=2&ao=0
+	javaopts='-server -XX:+DoEscapeAnalysis -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:CMSInitiatingOccupancyFraction=80 -XX:CMSIncrementalSafetyFactor=20 -XX:+UseCMSInitiatingOccupancyOnly -XX:MaxTenuringThreshold=32 -XX:+UseLargePages -Xmx2560M -Xms2560M -verbose:gc -Xloggc:gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps'
 
 	if [[ -e /etc/default/tomcat6 ]]; then
 		mktmp tomcatconftmp
