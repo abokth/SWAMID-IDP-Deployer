@@ -1463,7 +1463,7 @@ ErrorLog logs/shibboleth-idp-ssl_error_log
 TransferLog logs/shibboleth-idp-ssl_access_log
 LogLevel warn
 SSLEngine on
-SSLProtocol all -SSLv2
+SSLProtocol all -SSLv2 -SSLv3
 SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
 SSLCertificateFile /etc/pki/tls/certs/localhost.crt
 SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
@@ -1503,7 +1503,7 @@ ErrorLog logs/shibboleth-idp-ssl_error_log
 TransferLog logs/shibboleth-idp-ssl_access_log
 LogLevel warn
 SSLEngine on
-SSLProtocol all -SSLv2
+SSLProtocol all -SSLv2 -SSLv3
 SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
 SSLCertificateFile $installdir/credentials/idp.crt
 SSLCertificateKeyFile $installdir/credentials/idp.key
