@@ -1507,6 +1507,8 @@ SSLProtocol all -SSLv2 -SSLv3
 SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
 SSLCertificateFile $installdir/credentials/idp.crt
 SSLCertificateKeyFile $installdir/credentials/idp.key
+SSLVerifyClient optional_no_ca
+SSLVerifyDepth 10
 EOF
 	if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
 		cat >>"$httpdconftmp" <<EOF
