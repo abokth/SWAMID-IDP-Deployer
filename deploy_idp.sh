@@ -1560,6 +1560,25 @@ if [[ "${appserv}" = "tomcat" ]]; then
 	elif [[ "$tomcat_opts_changes" == "yes" ]]; then
 		service tomcat6 restart
 	fi
+	if [[ "${upgrade}" -eq 1 ]] && [[ "$apachefrontend" == "y" ]]; then
+	    service httpd restart
+	    declare -i httpdtries=0
+	    echo -n "Restarting Apache until the service is up..."
+	    while :; do
+		if curl 2>/dev/null "$entityid" | fgrep >/dev/null entityID=; then
+		    echo " ok"
+		    break
+		fi
+		echo -n .
+		sleep 3
+		service httpd restart >/dev/null 2>&1
+		((httpdtries++)) || :
+		if (( httpdtries > 30 )); then
+		    echo " giving up"
+		    break
+		fi
+	    done
+	fi
 fi
 
 echo -e "\n\n\n"
