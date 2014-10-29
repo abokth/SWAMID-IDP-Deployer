@@ -1565,7 +1565,7 @@ if [[ "${appserv}" = "tomcat" ]]; then
 	    declare -i httpdtries=0
 	    echo -n "Restarting Apache until the service is up..."
 	    while :; do
-		if curl 2>/dev/null "$entityid" | fgrep >/dev/null entityID=; then
+		if curl 2>/dev/null "${idpurl}/idp/shibboleth" | fgrep >/dev/null entityID=; then
 		    echo " ok"
 		    break
 		fi
