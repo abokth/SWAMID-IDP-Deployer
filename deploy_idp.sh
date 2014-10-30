@@ -1349,12 +1349,12 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
 			echo 'JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"' >> "$tomcatconftmp"
 		else
-			sed -i "$tomcatconftmp" -e 's,^JAVA_OPTS=.*$,JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'",;'
+			sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"~;'
 		fi
 		if ! grep '^AUTHBIND=' "$tomcatconftmp" >/dev/null; then
 			echo "AUTHBIND=yes" >> "$tomcatconftmp"
 		else
-			sed -i "$tomcatconftmp" -e 's,^AUTHBIND=.*$,AUTHBIND=yes,;'
+			sed -i "$tomcatconftmp" -e 's~^AUTHBIND=.*$~AUTHBIND=yes~;'
 		fi
 		if ! cmp -s /etc/default/tomcat6 "$tomcatconftmp"; then
 			cp "$tomcatconftmp" /etc/default/tomcat6.new
@@ -1370,12 +1370,12 @@ if [[ "${appserv}" = "tomcat" ]]; then
 		if ! grep '^JAVA_ENDORSED_DIRS=' "$tomcatconftmp" >/dev/null; then
 			echo "JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed" >> "$tomcatconftmp"
 		else
-			sed -i "$tomcatconftmp" -e 's,^JAVA_ENDORSED_DIRS=.*$,JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed,;'
+			sed -i "$tomcatconftmp" -e 's~^JAVA_ENDORSED_DIRS=.*$~JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed~;'
 		fi
 		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
 			echo 'JAVA_OPTS="'"$javaopts"'"' >> "$tomcatconftmp"
 		else
-			sed -i "$tomcatconftmp" -e 's,^JAVA_OPTS=.*$,JAVA_OPTS="'"$javaopts"'",;'
+			sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"$javaopts"'"~;'
 		fi
 		if ! cmp -s /etc/sysconfig/tomcat6 "$tomcatconftmp"; then
 			cp "$tomcatconftmp" /etc/sysconfig/tomcat6.new
