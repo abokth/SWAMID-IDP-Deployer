@@ -1340,6 +1340,9 @@ if [[ "${appserv}" = "tomcat" ]]; then
 	# https://access.redhat.com/labs/jvmconfig/#/?jv=Open&c=lowPause&hs=2560&gl=1&lp=1&de=1&dc=2&ao=0
 	javaopts='-server -XX:+DoEscapeAnalysis -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:CMSInitiatingOccupancyFraction=80 -XX:CMSIncrementalSafetyFactor=20 -XX:+UseCMSInitiatingOccupancyOnly -XX:MaxTenuringThreshold=32 -XX:+UseLargePages -Xmx2560M -Xms2560M -verbose:gc -Xloggc:gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps'
 
+	# Configure client HTTPS connections. (Required for CAS client.)
+	javaopts="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 $javaopts"
+
 	if [[ -e /etc/default/tomcat6 ]]; then
 		mktmp tomcatconftmp
 		cat /etc/default/tomcat6 >"$tomcatconftmp"
