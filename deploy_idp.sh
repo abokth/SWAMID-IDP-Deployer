@@ -575,9 +575,9 @@ elif [[ "$pkgmanager" == "yum" ]]; then
 	rpm -q >/dev/null 2>&1 patch unzip curl || yum install patch unzip curl
 
 	# Look for Java 1.6 or newer. (This excludes GCJ.)
-	if ! java -version 2>&1 | egrep -q '^java version "1\.(6|7|8|9|[0-9][0-9]+)'; then
+	if ! java -version 2>&1 | egrep -q '^(java|openjdk) version "1\.(6|7|8|9|[0-9][0-9]+)'; then
 		rpm -q >/dev/null 2>&1 java-1.7.0-openjdk || yum install java-1.7.0-openjdk || :
-		if ! java -version 2>&1 | egrep -q '^java version "1\.(6|7|8|9|1[0-9]+)'; then
+		if ! java -version 2>&1 | egrep -q '^(java|openjdk) version "1\.(6|7|8|9|1[0-9]+)'; then
 			errx \
 "Java 1.6 or newer required. Install java-1.7.0-openjdk or similar. For
 RHEL6, other JVMs are also available in the extra repositories (enable
