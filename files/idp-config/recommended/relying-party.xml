@@ -113,7 +113,7 @@
     </metadata:MetadataProvider>
  
     <metadata:MetadataProvider id="URLMD5" xsi:type="FileBackedHTTPMetadataProvider" xmlns="urn:mace:shibboleth:2.0:metadata"
-            metadataURL="http://testshib.org/metadata/testshib-providers.xml"
+            metadataURL="https://www.testshib.org/metadata/testshib-providers.xml"
             backingFile="$IDP_HOME$/metadata/testshib-providers.xml">
     </metadata:MetadataProvider>
 
