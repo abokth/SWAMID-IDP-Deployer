@@ -2,34 +2,21 @@
 # UTF-8
 HELP="
 ##############################################################################
-# Shibboleth deployment script by Anders Lördal                              #
-# Högskolan i Gävle and SWAMID                                               #
+# Shibboleth IdP deployment script                                           #
 #                                                                            #
-# Version 2.0                                                                #
+# KTH version 1.0                                                            #
 #                                                                            #
-# Deploys a working IDP for SWAMID on an Ubuntu system                       #
-# Uses: jboss-as-distribution-6.1.0.Final or tomcat6                         #
-#       shibboleth-identityprovider-2.4.0                                    #
-#       cas-client-3.2.1-release                                             #
+# Deploys a working IDP for SWAMID using CAS on a RHEL 6 / CentOS 6 system.  #
 #                                                                            #
-# Templates are provided for CAS and LDAP authentication                     #
-#                                                                            #
-# To disable the menu based interface, run with argument '-c'.               #
 # To install without confirmation, run with argument '-d'                    #
-#    NOTE! some of theese files WILL contain cleartext passwords.            #
-#                                                                            #
-# To add a new template for another authentication, just add a new directory #
-# under the 'prep' directory, add the neccesary .diff files and add any      #
-# special handling of those files to the script.                             #
 #                                                                            #
 # You can pre-set configuration values in the file 'config'                  #
 #                                                                            #
-# Please send questions and improvements to: anders.lordal@hig.se            #
 ##############################################################################
 "
 
 # Copyright 2011, 2012, 2013 Anders Lördal, Högskolan i Gävle and SWAMID
-# Copyright 2013 Alexander Boström, Kungliga Tekniska högskolan
+# Copyright 2013,2014 Alexander Boström, Kungliga Tekniska högskolan
 #
 # This file is part of IDP-Deployer
 #
