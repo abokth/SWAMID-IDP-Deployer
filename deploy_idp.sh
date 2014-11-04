@@ -84,7 +84,7 @@ mdSignerFinger="12:60:D7:09:6A:D9:C1:43:AD:31:88:14:3C:A8:C4:B7:33:8A:4F:CB"
 # Default enable of whiptail UI
 GUIen=y
 # Version of shibboleth IDP
-shibVer="2.4.0"
+shibVer="2.4.3"
 
 installdir=/opt/local/shibboleth-idp
 if [[ -e /opt/shibboleth-idp ]]; then installdir=/opt/shibboleth-idp; fi
@@ -917,16 +917,16 @@ fi
 
 if [[ "${fticks}" == "y" ]]; then
 	if ! type -t mvn >/dev/null; then
-		if [[ ! -e "$builddir"/apache-maven-3.1.1 ]]; then
-			fetchurl apache-maven-3.1.1-bin.tar.gz http://mirror.reverse.net/pub/apache/maven/maven-3/3.1.1/binaries/apache-maven-3.1.1-bin.tar.gz
+		if [[ ! -e "$builddir"/apache-maven-3.2.3 ]]; then
+			fetchurl apache-maven-3.2.3-bin.tar.gz http://mirror.reverse.net/pub/apache/maven/maven-3/3.2.3/binaries/apache-maven-3.2.3-bin.tar.gz
 			cd "$opttmp"
-			tar -xf "$downloaddir"/apache-maven-3.1.1-bin.tar.gz
-			mv apache-maven-3.1.1 "$builddir"
+			tar -xf "$downloaddir"/apache-maven-3.2.3-bin.tar.gz
+			mv apache-maven-3.2.3 "$builddir"
 		fi
-		export PATH="$builddir/apache-maven-3.1.1/bin:$PATH"
+		export PATH="$builddir/apache-maven-3.2.3/bin:$PATH"
 	fi
 
-	fticks_commit=bf324601353fb64497d62d3716defc29953a478c
+	fticks_commit=aa33e6306d739a94fd82b568b93fe9bccd1d6a27
 	if [[ ! -e "$builddir"/ndn-shib-fticks-$fticks_commit ]]; then
 		fetchurl ndn-shib-fticks-$fticks_commit.tar.gz https://codeload.github.com/leifj/ndn-shib-fticks/tar.gz/$fticks_commit
 		cd "$opttmp"
