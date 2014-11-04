@@ -21,9 +21,9 @@
     <!-- ========================================== -->
     <!--      Relying Party Configurations          -->
     <!-- ========================================== -->
-    <rp:AnonymousRelyingParty provider="https://servername.domain.topdomain/idp/shibboleth" defaultSigningCredentialRef="IdPCredential"/>
+    <rp:AnonymousRelyingParty provider="$IDP_ENTITY_ID$" defaultSigningCredentialRef="IdPCredential"/>
     
-    <rp:DefaultRelyingParty provider="https://servername.domain.topdomain/idp/shibboleth" defaultSigningCredentialRef="IdPCredential">
+    <rp:DefaultRelyingParty provider="$IDP_ENTITY_ID$" defaultSigningCredentialRef="IdPCredential">
         <!-- 
             Each attribute in these profiles configuration is set to its default value,
             that is, the values that would be in effect if those attributes were not present.
