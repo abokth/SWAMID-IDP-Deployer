@@ -1022,7 +1022,7 @@ if [[ "${uapprove}" == "y" ]]; then
  # http://myregexp.com/ can assist you creating such expressions.
 -services                    = ^https://.*\.example\.org/shibboleth$ \\
 -                              ^https://sp\.other-example\.org/shibboleth$
-+services                    = https://.*\.$escapedorgdomain/shibboleth$
++services                    = ^https://.*\.$escapedorgdomain/shibboleth$ ^https://.*\.$escapedorgdomain/Shibboleth.sso$
  
  # Indicates if the list above should be interpreted as blacklist (true)
  # or as whitelist (false). If this value is set to true, users will not
