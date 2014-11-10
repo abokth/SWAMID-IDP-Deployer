@@ -346,13 +346,9 @@ if [[ "${google}" == "y" ]]; then
 	text_input googleDom "Your Google domain name" "Please input your Google services domain name" "student.$schachomeorganization"
 fi
 
-menu_input appserv "Application server" "Which application server do you want to use?" 2 tomcat "Apache Tomcat 6" jboss "Jboss Application server 6"
-
-if [[ "$appserv" == "tomcat" ]]; then
-	defaultyes_input apachefrontend "Apache as AJP frontend" "Do you want to use Apache httpd as a web frontend (mod_ajp)?"
-	appservconf="$appserv"
-	if [[ "$apachefrontend" == "y" ]]; then appservconf="$appserv.ajp"; fi
-fi
+defaultyes_input apachefrontend "Apache as AJP frontend" "Do you want to use Apache httpd as a web frontend (mod_ajp)?"
+appservconf="$appserv"
+if [[ "$apachefrontend" == "y" ]]; then appservconf="$appserv.ajp"; fi
 
 menu_input type "Authentication type" "Which authentication method do you want to use?" 2 cas "Central Authentication Service" ldap "Username/Password Authentication with LDAP"
 prep="prep/${type}"
@@ -415,7 +411,6 @@ cat > "$confirmtext" << EOM
 Options passed to the installer:
 
 
-Application server:        ${appserv}
 Apache httpd front end:    ${apachefrontend}
 Authentication type:       ${type}
 
@@ -459,7 +454,6 @@ else
 fi
 
 cat >"${Spath}/config.tmp" << EOM
-appserv="$appserv"
 apachefrontend="$apachefrontend"
 type="$type"
 google="$google"
@@ -547,9 +541,8 @@ if [[ "$pkgmanager" == "apt" ]]; then
 		apt-get install git-core maven2 openjdk-6-jdk
 	fi
 
-	if [[ "${appserv}" = "tomcat" ]]; then
-		apt-get install tomcat6
-	fi
+	apt-get install tomcat6
+
 	# install java if needed
 	if ! type -t java >/dev/null; then
 		apt-get install default-jre
@@ -589,9 +582,7 @@ required, select a suitable version using 'alternatives --config javac'."
 		rpm -q >/dev/null 2>&1 git || yum install git
 	fi
 
-	if [[ "${appserv}" = "tomcat" ]]; then
-		rpm -q >/dev/null 2>&1 tomcat6 || yum install tomcat6
-	fi
+	rpm -q >/dev/null 2>&1 tomcat6 || yum install tomcat6
 	
 	if [[ "${apachefrontend}" = "y" ]]; then
 		rpm -q >/dev/null 2>&1 mod_ssl || yum install mod_ssl
@@ -823,44 +814,8 @@ if [[ "${upgrade}" -eq 0 ]]; then
 fi
 
 cd "$builddir"
-#get depens if needed
-if [[ "${appserv}" = "jboss" ]]; then
-	if [[ ! -e "$builddir"/jboss-6.1.0.Final ]]; then
-		fetchurl jboss-as-distribution-6.1.0.Final.zip http://download.jboss.org/jbossas/6.1/jboss-as-distribution-6.1.0.Final.zip
-		cd "$opttmp"
-		unzip -q "$downloaddir"/jboss-as-distribution-6.1.0.Final.zip
-		chmod 755 jboss-6.1.0.Final
 
-		xmlcheck "$opttmp/jboss-6.1.0.Final"/server/default/conf/login-config.xml
-		if [[ "${type}" = "ldap" ]]; then
-			cat ${Spath}/${prep}/login-config.xml.diff.template \
-				| perl -npe "s#LdApUrI#${ldapurls}#" \
-				| perl -npe "s/LdApBaSeDn/${ldapbasedn}/" \
-				| perl -npe "s/SuBsEaRcH/${subsearch}/" \
-				> ${Spath}/${prep}/login-config.xml.diff
-			tmpfiles[${#tmpfiles[@]}]="${Spath}/${prep}/login-config.xml.diff"
-			quiet patch "$opttmp/jboss-6.1.0.Final"/server/default/conf/login-config.xml -i ${Spath}/${prep}/login-config.xml.diff
-		fi
-		xmlcheck "$opttmp/jboss-6.1.0.Final"/server/default/conf/login-config.xml
-
-		ln -s "$installdir"/war/idp.war "$opttmp/jboss-6.1.0.Final"/server/default/deploy/
-
-		cp "$serverxmltmp" "$opttmp/jboss-6.1.0.Final"/server/default/deploy/jbossweb.sar/server.xml
-		chmod o-rwx "$opttmp/jboss-6.1.0.Final"/server/default/deploy/jbossweb.sar/server.xml
-
-		mv "$opttmp/jboss-6.1.0.Final" "$builddir"
-		if [[ -L "$builddir"/jboss ]]; then
-			rm "$builddir"/jboss
-		fi
-		ln -s "$builddir"/jboss-6.1.0.Final "$builddir"/jboss
-
-		software_changes=yes
-	fi
-fi
-
-if [[ "${appserv}" = "tomcat" ]]; then
-	fetchurl tomcat6-dta-ssl-1.0.0.jar "https://build.shibboleth.net/nexus/content/repositories/releases/edu/internet2/middleware/security/tomcat6/tomcat6-dta-ssl/1.0.0/tomcat6-dta-ssl-1.0.0.jar"
-fi
+fetchurl tomcat6-dta-ssl-1.0.0.jar "https://build.shibboleth.net/nexus/content/repositories/releases/edu/internet2/middleware/security/tomcat6/tomcat6-dta-ssl/1.0.0/tomcat6-dta-ssl-1.0.0.jar"
 
 if [[ "${type}" = "cas" ]]; then
 	if [[ ! -e "$builddir"/cas-client-3.2.1 ]]; then
@@ -1302,121 +1257,113 @@ fi
 chmod 750 "$installdir"
 chgrp tomcat "$installdir"
 
-if [[ "${appserv}" = "jboss" ]]; then
-	echo "Adding basic jboss init script to start on boot"
-	cp ${Spath}/files/jboss.init /etc/init.d/jboss
-	update-rc.d jboss defaults
+mkdir -p /usr/share/tomcat6/endorsed
+for jar in "$builddir/shibboleth-identityprovider-${shibVer}/endorsed"/*.jar; do
+	if [[ -e "$jar" ]] && [[ ! -s "/usr/share/tomcat6/endorsed/$(basename "$jar")" ]]; then
+		cp "$jar" /usr/share/tomcat6/endorsed/
+	fi
+done
+for jar in /usr/share/java/postgresql-jdbc.jar; do
+	if [[ -e "$jar" ]] && [[ ! -s "/usr/share/tomcat6/endorsed/$(basename "$jar")" ]]; then
+		ln -s "$jar" /usr/share/tomcat6/endorsed/
+	fi
+done
+if [[ "$apachefrontend" == "n" ]] && [[ ! -e /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]] && [[ ! -L /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]]; then
+	ln -s "$downloaddir"/tomcat6-dta-ssl-1.0.0.jar /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar 
 fi
 
-if [[ "${appserv}" = "tomcat" ]]; then
-	mkdir -p /usr/share/tomcat6/endorsed
-	for jar in "$builddir/shibboleth-identityprovider-${shibVer}/endorsed"/*.jar; do
-		if [[ -e "$jar" ]] && [[ ! -s "/usr/share/tomcat6/endorsed/$(basename "$jar")" ]]; then
-			cp "$jar" /usr/share/tomcat6/endorsed/
-		fi
-	done
-	for jar in /usr/share/java/postgresql-jdbc.jar; do
-		if [[ -e "$jar" ]] && [[ ! -s "/usr/share/tomcat6/endorsed/$(basename "$jar")" ]]; then
-			ln -s "$jar" /usr/share/tomcat6/endorsed/
-		fi
-	done
-	if [[ "$apachefrontend" == "n" ]] && [[ ! -e /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]] && [[ ! -L /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]]; then
-		ln -s "$downloaddir"/tomcat6-dta-ssl-1.0.0.jar /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar 
+# https://access.redhat.com/labs/jvmconfig/#/?jv=Open&c=lowPause&hs=2560&gl=1&lp=1&de=1&dc=2&ao=0
+javaopts='-server -XX:+DoEscapeAnalysis -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:CMSInitiatingOccupancyFraction=80 -XX:CMSIncrementalSafetyFactor=20 -XX:+UseCMSInitiatingOccupancyOnly -XX:MaxTenuringThreshold=32 -XX:+UseLargePages -Xmx2560M -Xms2560M -verbose:gc -Xloggc:gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps'
+
+# Configure client HTTPS connections. (Required for CAS client.)
+javaopts="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 $javaopts"
+
+if [[ -e /etc/default/tomcat6 ]]; then
+	mktmp tomcatconftmp
+	cat /etc/default/tomcat6 >"$tomcatconftmp"
+	if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
+		echo 'JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"' >> "$tomcatconftmp"
+	else
+		sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"~;'
 	fi
-
-	# https://access.redhat.com/labs/jvmconfig/#/?jv=Open&c=lowPause&hs=2560&gl=1&lp=1&de=1&dc=2&ao=0
-	javaopts='-server -XX:+DoEscapeAnalysis -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:CMSInitiatingOccupancyFraction=80 -XX:CMSIncrementalSafetyFactor=20 -XX:+UseCMSInitiatingOccupancyOnly -XX:MaxTenuringThreshold=32 -XX:+UseLargePages -Xmx2560M -Xms2560M -verbose:gc -Xloggc:gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps'
-
-	# Configure client HTTPS connections. (Required for CAS client.)
-	javaopts="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 $javaopts"
-
-	if [[ -e /etc/default/tomcat6 ]]; then
-		mktmp tomcatconftmp
-		cat /etc/default/tomcat6 >"$tomcatconftmp"
-		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
-			echo 'JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"' >> "$tomcatconftmp"
-		else
-			sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"-Djava.endorsed.dirs=/usr/share/tomcat6/endorsed $javaopts"'"~;'
-		fi
-		if ! grep '^AUTHBIND=' "$tomcatconftmp" >/dev/null; then
-			echo "AUTHBIND=yes" >> "$tomcatconftmp"
-		else
-			sed -i "$tomcatconftmp" -e 's~^AUTHBIND=.*$~AUTHBIND=yes~;'
-		fi
-		if ! cmp -s /etc/default/tomcat6 "$tomcatconftmp"; then
-			cp "$tomcatconftmp" /etc/default/tomcat6.new
-			mv /etc/default/tomcat6{.new,}
-			restorecon /etc/default/tomcat6 >/dev/null 2>&1 || :
-			tomcat_opts_changes=yes
-		fi
+	if ! grep '^AUTHBIND=' "$tomcatconftmp" >/dev/null; then
+		echo "AUTHBIND=yes" >> "$tomcatconftmp"
+	else
+		sed -i "$tomcatconftmp" -e 's~^AUTHBIND=.*$~AUTHBIND=yes~;'
 	fi
-
-	if [[ -e /etc/sysconfig/tomcat6 ]]; then
-		mktmp tomcatconftmp
-		cat /etc/sysconfig/tomcat6 >"$tomcatconftmp"
-		if ! grep '^JAVA_ENDORSED_DIRS=' "$tomcatconftmp" >/dev/null; then
-			echo "JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed" >> "$tomcatconftmp"
-		else
-			sed -i "$tomcatconftmp" -e 's~^JAVA_ENDORSED_DIRS=.*$~JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed~;'
-		fi
-		if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
-			echo 'JAVA_OPTS="'"$javaopts"'"' >> "$tomcatconftmp"
-		else
-			sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"$javaopts"'"~;'
-		fi
-		if ! cmp -s /etc/sysconfig/tomcat6 "$tomcatconftmp"; then
-			cp "$tomcatconftmp" /etc/sysconfig/tomcat6.new
-			mv /etc/sysconfig/tomcat6{.new,}
-			restorecon /etc/sysconfig/tomcat6 >/dev/null 2>&1 || :
-			tomcat_opts_changes=yes
-		fi
+	if ! cmp -s /etc/default/tomcat6 "$tomcatconftmp"; then
+		cp "$tomcatconftmp" /etc/default/tomcat6.new
+		mv /etc/default/tomcat6{.new,}
+		restorecon /etc/default/tomcat6 >/dev/null 2>&1 || :
+		tomcat_opts_changes=yes
 	fi
-
-	tomcatgroup=tomcat
-
-	backup_file /etc/tomcat6/server.xml .orig
-
-	if [[ "${upgrade}" -eq 0 ]]; then
-		cp "$serverxmltmp" /etc/tomcat6/server.xml
-		chgrp $tomcatgroup /etc/tomcat6/server.xml
-		chmod 640 /etc/tomcat6/server.xml
-	fi
-
-	if [[ -d "/var/lib/tomcat6/webapps/ROOT" ]]; then
-		mv /var/lib/tomcat6/webapps/ROOT /opt/disabled-var-lib-tomcat6-webapps-ROOT
-	fi
-
-	chgrp -R $tomcatgroup "$installdir"/metadata
-	chmod -R 770 "$installdir"/metadata
-
-	idplogdir=/usr/share/tomcat6/logs/shibboleth-idp
-	mkdir -p "$idplogdir"
-	chgrp -R $tomcatgroup "$idplogdir"
-	chmod 770 "$idplogdir"
-	
-	if [[ ! -L "$installdir"/logs ]]; then
-	    if [[ -e "$installdir"/logs ]]; then
-		mv "$installdir"/logs "$installdir"/logs.old
-	    fi
-	    ln -s "$idplogdir" "$installdir"/logs
-	fi
-		
-	chgrp -R $tomcatgroup "$installdir"/conf/*.properties
-	chmod 640 "$installdir"/conf/*.properties
-	
-	if [[ -n "$software_changes" ]]; then
-		cp "$installdir"/war/idp.war /usr/share/tomcat6/webapps/idp.war.new
-		chgrp -R $tomcatgroup /usr/share/tomcat6/webapps/idp.war.new
-		chmod 640 /usr/share/tomcat6/webapps/idp.war.new
-		rm -rf /usr/share/tomcat6/webapps/idp.new
-		mkdir /usr/share/tomcat6/webapps/idp.new
-		cdpush /usr/share/tomcat6/webapps/idp.new
-		jar -xf ../idp.war.new
-		cdpop
-	fi
-
-	chgrp $tomcatgroup $installdir/credentials/idp.key
 fi
+
+if [[ -e /etc/sysconfig/tomcat6 ]]; then
+	mktmp tomcatconftmp
+	cat /etc/sysconfig/tomcat6 >"$tomcatconftmp"
+	if ! grep '^JAVA_ENDORSED_DIRS=' "$tomcatconftmp" >/dev/null; then
+		echo "JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed" >> "$tomcatconftmp"
+	else
+		sed -i "$tomcatconftmp" -e 's~^JAVA_ENDORSED_DIRS=.*$~JAVA_ENDORSED_DIRS=/usr/share/tomcat6/endorsed~;'
+	fi
+	if ! grep '^JAVA_OPTS=' "$tomcatconftmp" >/dev/null; then
+		echo 'JAVA_OPTS="'"$javaopts"'"' >> "$tomcatconftmp"
+	else
+		sed -i "$tomcatconftmp" -e 's~^JAVA_OPTS=.*$~JAVA_OPTS="'"$javaopts"'"~;'
+	fi
+	if ! cmp -s /etc/sysconfig/tomcat6 "$tomcatconftmp"; then
+		cp "$tomcatconftmp" /etc/sysconfig/tomcat6.new
+		mv /etc/sysconfig/tomcat6{.new,}
+		restorecon /etc/sysconfig/tomcat6 >/dev/null 2>&1 || :
+		tomcat_opts_changes=yes
+	fi
+fi
+
+tomcatgroup=tomcat
+
+backup_file /etc/tomcat6/server.xml .orig
+
+if [[ "${upgrade}" -eq 0 ]]; then
+	cp "$serverxmltmp" /etc/tomcat6/server.xml
+	chgrp $tomcatgroup /etc/tomcat6/server.xml
+	chmod 640 /etc/tomcat6/server.xml
+fi
+
+if [[ -d "/var/lib/tomcat6/webapps/ROOT" ]]; then
+	mv /var/lib/tomcat6/webapps/ROOT /opt/disabled-var-lib-tomcat6-webapps-ROOT
+fi
+
+chgrp -R $tomcatgroup "$installdir"/metadata
+chmod -R 770 "$installdir"/metadata
+
+idplogdir=/usr/share/tomcat6/logs/shibboleth-idp
+mkdir -p "$idplogdir"
+chgrp -R $tomcatgroup "$idplogdir"
+chmod 770 "$idplogdir"
+
+if [[ ! -L "$installdir"/logs ]]; then
+    if [[ -e "$installdir"/logs ]]; then
+	mv "$installdir"/logs "$installdir"/logs.old
+    fi
+    ln -s "$idplogdir" "$installdir"/logs
+fi
+
+chgrp -R $tomcatgroup "$installdir"/conf/*.properties
+chmod 640 "$installdir"/conf/*.properties
+
+if [[ -n "$software_changes" ]]; then
+	cp "$installdir"/war/idp.war /usr/share/tomcat6/webapps/idp.war.new
+	chgrp -R $tomcatgroup /usr/share/tomcat6/webapps/idp.war.new
+	chmod 640 /usr/share/tomcat6/webapps/idp.war.new
+	rm -rf /usr/share/tomcat6/webapps/idp.new
+	mkdir /usr/share/tomcat6/webapps/idp.new
+	cdpush /usr/share/tomcat6/webapps/idp.new
+	jar -xf ../idp.war.new
+	cdpop
+fi
+
+chgrp $tomcatgroup $installdir/credentials/idp.key
 
 fetchurl md-signer.crt.maybe-${mdSignerFinger} https://md.swamid.se/md/md-signer.crt
 cFinger=$(openssl x509 -noout -fingerprint -sha1 -in "$downloaddir"/md-signer.crt.maybe-${mdSignerFinger} | cut -d\= -f2)
@@ -1435,10 +1382,8 @@ if [[ "${fticks}" == "y" ]]; then
 		cp -a "$fticks_key_file" "$installdir"/conf/fticks-key.txt
 	fi
 	touch "$installdir"/conf/fticks-key.txt
-	if [[ "${appserv}" = "tomcat" ]]; then
-		chgrp $tomcatgroup "$installdir"/conf/fticks-key.txt
-		chmod 770 "$installdir"/conf/fticks-key.txt
-	fi
+	chgrp $tomcatgroup "$installdir"/conf/fticks-key.txt
+	chmod 770 "$installdir"/conf/fticks-key.txt
 fi
 
 xmlcheck ${Spath}/xml/google.xml
@@ -1535,40 +1480,38 @@ EOF
 	fi
 fi
 
-if [[ "${appserv}" = "tomcat" ]]; then
-	restorecon -r /usr/share/tomcat6 /var/lib/tomcat6 /var/log/tomcat6 /usr/share/java/tomcat6 /var/cache/tomcat6 /etc/tomcat6/ >/dev/null 2>&1 || :
-	if [[ "$software_changes" == "yes" ]]; then
-		service tomcat6 stop || :
-		if [[ -e /usr/share/tomcat6/webapps/idp.war.new ]]; then
-			rm -rf /var/cache/tomcat6/work/* /var/cache/tomcat6/temp/*
-			rm -rf /usr/share/tomcat6/webapps/idp
-			mv /usr/share/tomcat6/webapps/idp.war{.new,}
-			mv /usr/share/tomcat6/webapps/idp{.new,}
-			#mv "$tomcatconfdir"/Catalina/localhost/idp.xml{.new,}
-		fi
-		service tomcat6 start
-	elif [[ "$tomcat_opts_changes" == "yes" ]]; then
-		service tomcat6 restart
+restorecon -r /usr/share/tomcat6 /var/lib/tomcat6 /var/log/tomcat6 /usr/share/java/tomcat6 /var/cache/tomcat6 /etc/tomcat6/ >/dev/null 2>&1 || :
+if [[ "$software_changes" == "yes" ]]; then
+	service tomcat6 stop || :
+	if [[ -e /usr/share/tomcat6/webapps/idp.war.new ]]; then
+		rm -rf /var/cache/tomcat6/work/* /var/cache/tomcat6/temp/*
+		rm -rf /usr/share/tomcat6/webapps/idp
+		mv /usr/share/tomcat6/webapps/idp.war{.new,}
+		mv /usr/share/tomcat6/webapps/idp{.new,}
+		#mv "$tomcatconfdir"/Catalina/localhost/idp.xml{.new,}
 	fi
-	if [[ "${upgrade}" -eq 1 ]] && [[ "$apachefrontend" == "y" ]]; then
-	    service httpd restart
-	    declare -i httpdtries=0
-	    echo -n "Restarting Apache until the service is up..."
-	    while :; do
+	service tomcat6 start
+elif [[ "$tomcat_opts_changes" == "yes" ]]; then
+	service tomcat6 restart
+fi
+if [[ "${upgrade}" -eq 1 ]] && [[ "$apachefrontend" == "y" ]]; then
+	service httpd restart
+	declare -i httpdtries=0
+	echo -n "Restarting Apache until the service is up..."
+	while :; do
 		if curl 2>/dev/null "${idpurl}/idp/shibboleth" | fgrep >/dev/null entityID=; then
-		    echo " ok"
-		    break
+			echo " ok"
+			break
 		fi
 		echo -n .
 		sleep 3
 		service httpd restart >/dev/null 2>&1
 		((httpdtries++)) || :
 		if (( httpdtries > 30 )); then
-		    echo " giving up"
-		    break
+			echo " giving up"
+			break
 		fi
-	    done
-	fi
+	done
 fi
 
 echo -e "\n\n\n"
