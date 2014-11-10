@@ -346,10 +346,6 @@ if [[ "${google}" == "y" ]]; then
 	text_input googleDom "Your Google domain name" "Please input your Google services domain name" "student.$schachomeorganization"
 fi
 
-defaultyes_input apachefrontend "Apache as AJP frontend" "Do you want to use Apache httpd as a web frontend (mod_ajp)?"
-appservconf="$appserv"
-if [[ "$apachefrontend" == "y" ]]; then appservconf="$appserv.ajp"; fi
-
 menu_input type "Authentication type" "Which authentication method do you want to use?" 2 cas "Central Authentication Service" ldap "Username/Password Authentication with LDAP"
 prep="prep/${type}"
 
@@ -411,7 +407,6 @@ cat > "$confirmtext" << EOM
 Options passed to the installer:
 
 
-Apache httpd front end:    ${apachefrontend}
 Authentication type:       ${type}
 
 Release to Google:         ${google}
@@ -454,7 +449,6 @@ else
 fi
 
 cat >"${Spath}/config.tmp" << EOM
-apachefrontend="$apachefrontend"
 type="$type"
 google="$google"
 googleDom="$googleDom"
@@ -514,18 +508,6 @@ fi
 defaultno_input doinstall "Confirm" "Do you want to install this IDP with these options?"
 [[ "$doinstall" == "y" ]]
 
-if [[ "${apachefrontend}" == "n" ]]; then
-	for p12 in {/etc/pki/tls,/etc/ssl}/private/localhost.p12; do
-		if [[ -e "$p12" ]]; then
-			httpsP12="$p12"
-			break;
-		fi
-	done
-	if [[ -z "$httpsP12" ]]; then
-		errx "First use 'request-cert' to generate a certificate."
-	fi
-fi
-
 certCN=$(cut <<<"$idpurl" -d/ -f3)
 
 if [[ -e "$installdir"/conf/fticks-key.txt && ! -e "$fticks_key_file" ]]; then
@@ -584,9 +566,7 @@ required, select a suitable version using 'alternatives --config javac'."
 
 	rpm -q >/dev/null 2>&1 tomcat6 || yum install tomcat6
 	
-	if [[ "${apachefrontend}" = "y" ]]; then
-		rpm -q >/dev/null 2>&1 mod_ssl || yum install mod_ssl
-	fi
+	rpm -q >/dev/null 2>&1 mod_ssl || yum install mod_ssl
 
 	if [[ "${uapprove}" == "y" || "${targetedid}" == "y" ]]; then
 		if [[ "$uapprove_db_host" == "localhost" || "$uapprove_db_host" == "localhost.localdomain" || "$targetedid_db_host" == "localhost" || "$targetedid_db_host" == "localhost.localdomain" ]]; then
@@ -798,12 +778,9 @@ if [[ "${upgrade}" -eq 0 ]]; then
 	if [[ -z "${pass}" ]]; then
 		genpw; pass="$pw"
 	fi
-	if [[ "$apachefrontend" == "n" && -z "${httpspass}" ]]; then
-		genpw; httpspass="$pw"
-	fi
 
 	mktmp serverxmltmp
-	cat ${Spath}/xml/server.xml.${appservconf} \
+	cat ${Spath}/xml/server.xml.tomcat.ajp \
 		| perl -npe "s#ShIbBKeyPaSs#${pass}#" \
 		| perl -npe "s#HtTpSkEyPaSs#${httpspass}#" \
 		| perl -npe "s#HtTpSJkS#${httpsP12}#" \
@@ -1268,9 +1245,6 @@ for jar in /usr/share/java/postgresql-jdbc.jar; do
 		ln -s "$jar" /usr/share/tomcat6/endorsed/
 	fi
 done
-if [[ "$apachefrontend" == "n" ]] && [[ ! -e /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]] && [[ ! -L /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar ]]; then
-	ln -s "$downloaddir"/tomcat6-dta-ssl-1.0.0.jar /usr/share/tomcat6/lib/tomcat6-dta-ssl-1.0.0.jar 
-fi
 
 # https://access.redhat.com/labs/jvmconfig/#/?jv=Open&c=lowPause&hs=2560&gl=1&lp=1&de=1&dc=2&ao=0
 javaopts='-server -XX:+DoEscapeAnalysis -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:+ExplicitGCInvokesConcurrent -XX:CMSInitiatingOccupancyFraction=80 -XX:CMSIncrementalSafetyFactor=20 -XX:+UseCMSInitiatingOccupancyOnly -XX:MaxTenuringThreshold=32 -XX:+UseLargePages -Xmx2560M -Xms2560M -verbose:gc -Xloggc:gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps'
@@ -1390,9 +1364,8 @@ xmlcheck ${Spath}/xml/google.xml
 cat ${Spath}/xml/google.xml | perl -npe "s/GoOgLeDoMaIn/${googleDom}/" > "$installdir"/metadata/google.xml
 xmlcheck "$installdir"/metadata/google.xml
 
-if [[ "$apachefrontend" == "y" ]]; then
-	mktmp httpdconftmp
-	cat >"$httpdconftmp" <<EOF
+mktmp httpdconftmp
+cat >"$httpdconftmp" <<EOF
 <VirtualHost $idphostname:443>
 ErrorLog logs/shibboleth-idp-ssl_error_log
 TransferLog logs/shibboleth-idp-ssl_access_log
@@ -1403,12 +1376,12 @@ SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
 SSLCertificateFile /etc/pki/tls/certs/localhost.crt
 SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
 EOF
-	if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
-		cat >>"$httpdconftmp" <<EOF
+if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
+	cat >>"$httpdconftmp" <<EOF
 SSLCertificateChainFile /etc/pki/tls/certs/server-chain.crt
 EOF
-	fi
-	cat >>"$httpdconftmp" <<EOF
+fi
+cat >>"$httpdconftmp" <<EOF
 <Files ~ "\.(cgi|shtml|phtml|php3?)$">
     SSLOptions +StdEnvVars
 </Files>
@@ -1445,12 +1418,12 @@ SSLCertificateKeyFile $installdir/credentials/idp.key
 SSLVerifyClient optional_no_ca
 SSLVerifyDepth 10
 EOF
-	if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
-		cat >>"$httpdconftmp" <<EOF
+if [[ -e /etc/pki/tls/certs/server-chain.crt ]]; then
+	cat >>"$httpdconftmp" <<EOF
 SSLCertificateChainFile /etc/pki/tls/certs/server-chain.crt
 EOF
-	fi
-	cat >>"$httpdconftmp" <<EOF
+fi
+cat >>"$httpdconftmp" <<EOF
 <Files ~ "\.(cgi|shtml|phtml|php3?)$">
     SSLOptions +StdEnvVars
 </Files>
@@ -1474,10 +1447,9 @@ CustomLog logs/shibboleth-idp-ssl_request_log \
 Redirect / https://www.$schachomeorganization/
 </VirtualHost>
 EOF
-	if [[ -d /etc/httpd/conf.d ]]; then
-		cp "$httpdconftmp" /etc/httpd/conf.d/zz-80-shibboleth-idp.conf
-		chmod a+r /etc/httpd/conf.d/zz-80-shibboleth-idp.conf
-	fi
+if [[ -d /etc/httpd/conf.d ]]; then
+	cp "$httpdconftmp" /etc/httpd/conf.d/zz-80-shibboleth-idp.conf
+	chmod a+r /etc/httpd/conf.d/zz-80-shibboleth-idp.conf
 fi
 
 restorecon -r /usr/share/tomcat6 /var/lib/tomcat6 /var/log/tomcat6 /usr/share/java/tomcat6 /var/cache/tomcat6 /etc/tomcat6/ >/dev/null 2>&1 || :
@@ -1494,7 +1466,7 @@ if [[ "$software_changes" == "yes" ]]; then
 elif [[ "$tomcat_opts_changes" == "yes" ]]; then
 	service tomcat6 restart
 fi
-if [[ "${upgrade}" -eq 1 ]] && [[ "$apachefrontend" == "y" ]]; then
+if [[ "${upgrade}" -eq 1 ]]; then
 	service httpd restart
 	declare -i httpdtries=0
 	echo -n "Restarting Apache until the service is up..."
@@ -1526,13 +1498,7 @@ if [[ "${upgrade}" -eq 0 ]]; then
 	echo ""
 	echo "Use either 'request-cert' and 'install-cert' or 'self-signed-cert' to"
 	echo "generate a web server certificate if you have not done so already."
-	if [[ "$apachefrontend" == "y" ]]; then
-		echo "Start Apache httpd when a web server certificates has been configured."
-	else
-		echo "Restart services when a web server certificates has been configured."
-		echo "If required, run"
-		echo " /root/certs/.../install-localhost-chain-in-java-keystore"
-	fi
+	echo "Start Apache httpd when a web server certificates has been configured."
 fi
 echo "Logs are in: /usr/share/tomcat6/logs/"
 echo ""
