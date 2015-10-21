@@ -808,13 +808,14 @@ fi
 
 if [[ -n "${need_mvn}" ]]; then
     if ! type -t mvn >/dev/null; then
-	if [[ ! -e "$builddir"/apache-maven-3.2.3 ]]; then
-	    fetchurl apache-maven-3.2.3-bin.tar.gz http://mirror.reverse.net/pub/apache/maven/maven-3/3.2.3/binaries/apache-maven-3.2.3-bin.tar.gz
+	if [[ ! -e "$builddir"/apache-maven-3.3.3 ]]; then
+	    fetchurl apache-maven-3.3.3-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz
+	    md5sum "$downloaddir"/apache-maven-3.3.3-bin.tar.gz | cut -d' ' -f1 | fgrep -q 794b3b7961200c542a7292682d21ba36
 	    cd "$opttmp"
-	    tar -xf "$downloaddir"/apache-maven-3.2.3-bin.tar.gz
-	    mv apache-maven-3.2.3 "$builddir"
+	    tar -xf "$downloaddir"/apache-maven-3.3.3-bin.tar.gz
+	    mv apache-maven-3.3.3 "$builddir"
 	fi
-	export PATH="$builddir/apache-maven-3.2.3/bin:$PATH"
+	export PATH="$builddir/apache-maven-3.3.3/bin:$PATH"
     fi
 fi
 
