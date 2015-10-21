@@ -802,6 +802,22 @@ cd "$builddir"
 
 fetchurl tomcat6-dta-ssl-1.0.0.jar "https://build.shibboleth.net/nexus/content/repositories/releases/edu/internet2/middleware/security/tomcat6/tomcat6-dta-ssl/1.0.0/tomcat6-dta-ssl-1.0.0.jar"
 
+if [[ "${type}" = "cas" || "${fticks}" == "y" ]]; then
+    need_mvn=yes
+fi
+
+if [[ -n "${need_mvn}" ]]; then
+    if ! type -t mvn >/dev/null; then
+	if [[ ! -e "$builddir"/apache-maven-3.2.3 ]]; then
+	    fetchurl apache-maven-3.2.3-bin.tar.gz http://mirror.reverse.net/pub/apache/maven/maven-3/3.2.3/binaries/apache-maven-3.2.3-bin.tar.gz
+	    cd "$opttmp"
+	    tar -xf "$downloaddir"/apache-maven-3.2.3-bin.tar.gz
+	    mv apache-maven-3.2.3 "$builddir"
+	fi
+	export PATH="$builddir/apache-maven-3.2.3/bin:$PATH"
+    fi
+fi
+
 if [[ "${type}" = "cas" ]]; then
     if [[ ! -e "$builddir"/cas-client-3.2.1 ]]; then
 	fetchurl cas-client-3.2.1-release.zip "http://downloads.jasig.org/cas-clients/cas-client-3.2.1-release.zip"
@@ -856,16 +872,6 @@ else
 fi
 
 if [[ "${fticks}" == "y" ]]; then
-    if ! type -t mvn >/dev/null; then
-	if [[ ! -e "$builddir"/apache-maven-3.2.3 ]]; then
-	    fetchurl apache-maven-3.2.3-bin.tar.gz http://mirror.reverse.net/pub/apache/maven/maven-3/3.2.3/binaries/apache-maven-3.2.3-bin.tar.gz
-	    cd "$opttmp"
-	    tar -xf "$downloaddir"/apache-maven-3.2.3-bin.tar.gz
-	    mv apache-maven-3.2.3 "$builddir"
-	fi
-	export PATH="$builddir/apache-maven-3.2.3/bin:$PATH"
-    fi
-
     fticks_commit=aa33e6306d739a94fd82b568b93fe9bccd1d6a27
     if [[ ! -e "$builddir"/ndn-shib-fticks-$fticks_commit ]]; then
 	fetchurl ndn-shib-fticks-$fticks_commit.tar.gz https://codeload.github.com/leifj/ndn-shib-fticks/tar.gz/$fticks_commit
