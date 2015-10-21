@@ -520,7 +520,7 @@ if [[ "$pkgmanager" == "apt" ]]; then
     apt-get install patch unzip curl
 
     if [[ "${fticks}" == "y" ]]; then
-	apt-get install git-core maven2 openjdk-6-jdk
+	apt-get install maven2 openjdk-6-jdk
     fi
 
     apt-get install tomcat6
@@ -560,8 +560,6 @@ them i RHN). Check current JDK version with 'javac -version', and if
 required, select a suitable version using 'alternatives --config javac'."
 	    fi
 	fi
-
-	rpm -q >/dev/null 2>&1 git || yum install git
     fi
 
     rpm -q >/dev/null 2>&1 tomcat6 || yum install tomcat6
