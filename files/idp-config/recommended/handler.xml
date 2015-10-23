@@ -113,8 +113,9 @@
     
     <!-- Login Handlers -->
 <!-- %%%%enable_cas%%%%
-    <ph:LoginHandler xsi:type="ph:RemoteUser">
+    <ph:LoginHandler xsi:schemaLocation="fr:renater:ssocashandler classpath:/schema/ssocasloginhandler.xsd" xmlns:sclh="fr:renater:ssocashandler" xsi:type="sclh:CentralAuthnService" casFiltersPath="/Authn/Cas">
         <ph:AuthenticationMethod>urn:oasis:names:tc:SAML:2.0:ac:classes:unspecified</ph:AuthenticationMethod>
+        <ph:AuthenticationMethod>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</ph:AuthenticationMethod>
     </ph:LoginHandler>
 %%%%enable_cas%%%% -->
     

@@ -548,6 +548,10 @@ required, select a suitable version using 'alternatives --config java'."
 	fi
     fi
 
+    if [[ "${type}" = "cas" ]]; then
+	rpm -q >/dev/null 2>&1 subversion || yum install subversion
+    fi
+
     if [[ "${fticks}" == "y" ]]; then
 	# We also need the JDK
 	if ! javac -version 2>&1 | egrep -q '^javac 1\.(6|7|8|9|[0-9][0-9]+)'; then
@@ -818,6 +822,19 @@ if [[ -n "${need_mvn}" ]]; then
 fi
 
 if [[ "${type}" = "cas" ]]; then
+    ssocas_revision=32
+    ssocasjar="$builddir"/ssocas-login-handler-$ssocas_revision/target/ssocas-login-handler-0.8.jar
+    if [[ ! -e "$builddir"/ssocas-login-handler-$ssocas_revision ]]; then
+	cd "$opttmp"
+	svn export -r$ssocas_revision https://subversion.renater.fr/ssocashandler/trunk/ ssocas-login-handler-$ssocas_revision
+	mv ssocas-login-handler-$ssocas_revision "$builddir"
+	cd "$builddir"/ssocas-login-handler-$ssocas_revision
+	if ! mvn package; then
+	    rm -rf "$builddir"/ssocas-login-handler-$ssocas_revision
+	    exit 1
+	fi
+	software_changes=yes
+    fi
     if [[ ! -e "$builddir"/cas-client-3.2.1 ]]; then
 	fetchurl cas-client-3.2.1-release.zip "http://downloads.jasig.org/cas-clients/cas-client-3.2.1-release.zip"
 	cd "$opttmp"
@@ -1031,6 +1048,8 @@ if [[ "${type}" = "cas" ]]; then
 	mkdir "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF/lib
 	cp "$builddir"/cas-client-3.2.1/modules/cas-client-core-3.2.1.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF/lib
 	cp "$builddir"/cas-client-3.2.1/modules/commons-logging-1.1.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF/lib
+	cp "$ssocasjar" "$opttmp/shibboleth-identityprovider-${shibVer}"/lib/
+	cp "$ssocasjar" "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/WEB-INF/lib
     fi
 fi
 
