@@ -800,8 +800,6 @@ fi
 
 cd "$builddir"
 
-fetchurl tomcat6-dta-ssl-1.0.0.jar "https://build.shibboleth.net/nexus/content/repositories/releases/edu/internet2/middleware/security/tomcat6/tomcat6-dta-ssl/1.0.0/tomcat6-dta-ssl-1.0.0.jar"
-
 if [[ "${type}" = "cas" || "${fticks}" == "y" ]]; then
     need_mvn=yes
 fi
@@ -830,11 +828,11 @@ if [[ "${type}" = "cas" ]]; then
 fi
 
 if [[ "${uapprove}" == "y" ]]; then
-    if [[ ! -e "$builddir"/uApprove-2.5.0 ]]; then
-	fetchurl uApprove-2.5.0.zip https://forge.switch.ch/redmine/attachments/download/1623/uApprove-2.5.0.zip
+    if [[ ! -e "$builddir"/uApprove-2.6.0 ]]; then
+	fetchurl uApprove-2.6.0.zip https://forge.switch.ch/redmine/attachments/download/1823/uApprove-2.6.0.zip
 	cd "$opttmp"
-	unzip -q "$downloaddir"/uApprove-2.5.0.zip
-	mv uApprove-2.5.0 "$builddir"
+	unzip -q "$downloaddir"/uApprove-2.6.0.zip
+	mv uApprove-2.6.0 "$builddir"
 	software_changes=yes
     fi
 fi
@@ -948,14 +946,14 @@ fi
 
 if [[ "${uapprove}" == "y" ]]; then
     if [[ -e "$opttmp/shibboleth-identityprovider-${shibVer}" ]]; then
-	cp "$builddir"/uApprove-2.5.0/lib/*.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/lib
-	cp "$builddir"/uApprove-2.5.0/lib/jdbc/*.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/lib
+	cp "$builddir"/uApprove-2.6.0/lib/*.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/lib
+	cp "$builddir"/uApprove-2.6.0/lib/jdbc/*.jar "$opttmp/shibboleth-identityprovider-${shibVer}"/lib
 	mkdir "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/uApprove
-	cp "$builddir"/uApprove-2.5.0/webapp/* "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/uApprove
+	cp "$builddir"/uApprove-2.6.0/webapp/* "$opttmp/shibboleth-identityprovider-${shibVer}"/src/main/webapp/uApprove
     fi
 
     mktmp uapproveproperties
-    cat "$builddir"/uApprove-2.5.0/manual/configuration/uApprove.properties >"$uapproveproperties"
+    cat "$builddir"/uApprove-2.6.0/manual/configuration/uApprove.properties >"$uapproveproperties"
 
     escapedorgdomain="${schachomeorganization//./\.}"
 
@@ -1000,7 +998,7 @@ EOF
 
     if [[ -z "$pw" ]]; then
 	postgresql_db_create "$uapprove_db_host" "$uapprove_db_name" "$uapprove_db_user"
-	cat "$builddir"/uApprove-2.5.0/manual/storage/{terms-of-use-schema,attribute-release-schema}.sql | env PGPASSWORD="$pw" psql --host=$uapprove_db_host --username=$uapprove_db_user $uapprove_db_name
+	cat "$builddir"/uApprove-2.6.0/manual/storage/{terms-of-use-schema,attribute-release-schema}.sql | env PGPASSWORD="$pw" psql --host=$uapprove_db_host --username=$uapprove_db_user $uapprove_db_name
     fi
 
     sed -i "$uapproveproperties" -re 's,^(database\.driver *)=.*$,\1= org.postgresql.Driver,;'
@@ -1165,8 +1163,8 @@ done
 cdpop
 
 if [[ -n "$uapproveproperties" ]]; then
-    #xmlcheck "$builddir"/uApprove-2.5.0/manual/configuration/uApprove.xml
-    cp "$builddir"/uApprove-2.5.0/manual/configuration/uApprove.xml "$installdir"/conf/uApprove.xml
+    #xmlcheck "$builddir"/uApprove-2.6.0/manual/configuration/uApprove.xml
+    cp "$builddir"/uApprove-2.6.0/manual/configuration/uApprove.xml "$installdir"/conf/uApprove.xml
     sed -i "$installdir"/conf/uApprove.xml -e "s,classpath:/configuration,file:$installdir/conf,g;"
     #xmlcheck "$installdir"/conf/uApprove.xml
     cp "$uapproveproperties" "$installdir"/conf/uApprove.properties
