@@ -643,55 +643,65 @@ if [[ ! -e "$builddir/shibboleth-identityprovider-${shibVer}" ]]; then
     software_changes=yes
 fi
 
+cached_schemadir=""
+
 xmlcheck() {
     local l="${BASH_LINENO}"
     local xmlns
     local xmlf xmlbasename
     local jar
     local idpdir
+    local schemadir
 
-    for idpdir in "$builddir"/shibboleth-identityprovider-${shibVer} "$opttmp"/shibboleth-identityprovider-${shibVer}; do
-	if [[ -e "$idpdir" ]]; then
-	    break
+    if [[ -n "$cached_schemadir" ]]; then
+	schemadir="$cached_schemadir"
+
+	if xmllint --nonet --xinclude --nowarning --noout --path "$schemadir" --schema "$schemadir"/schema.xsd "$@"; then
+	    return 0
+	else
+	    echo >&2 "Trying again with fresh schema."
+	    rm -rf "$cached_schemadir"
+	    cached_schemadir=""
 	fi
-    done
-    if [[ ! -e "$idpdir" ]]; then
-	errx "Internal error"
     fi
 
-    if [[ -z "$schemadir" ]]; then
-	mktmp schemadir -d
-	cdpush "$schemadir"
+    mktmp schemadir -d
+    cdpush "$schemadir"
+    for idpdir in "$opttmp"/shibboleth-identityprovider-${shibVer} "$builddir"/shibboleth-identityprovider-${shibVer}; do
 	for jar in "$idpdir"/lib/*.jar; do
-	    jar -xf "$jar" schema org/springframework #javax/servlet/resources  org/apache/xml/security/resource/schema
-	done
-	cat >schema.xsd <<'EOF'
-<schema targetNamespace="aggregate" xmlns="http://www.w3.org/2001/XMLSchema" version="1.2">
-EOF
-	#find org/springframework -name '*.xsd'|sort
-	for xmlf in schema/*.xsd org/springframework/beans/factory/xml/*.xsd; do
-	    xmlbasename=$(basename "$xmlf")
-	    sed -i "$xmlf" -e 's,classpath:/schema/,,;'
-	    #sed -i "$xmlf" -e 's,schemaLocation="http://www.ibm.com/webservices/xsd/j2ee_web_services_client_1_1.xsd,schemaLocation="j2ee_web_services_client_1_1.xsd,;'
-	    if [[ ! -e "$xmlbasename" ]]; then
-		ln -s "$xmlf" "$xmlbasename"
-		if ! fgrep 'schemaLocation="http' "$xmlf" >/dev/null; then
-		    xmlns=$(tr '\n' ' ' <"$xmlf" |sed -nre 's,.*<([^ ]+:|)schema [^>]*targetNamespace="([^"]+)".*,\2,p;')
-		    if [[ -n "$xmlns" ]]; then
-			cat >>schema.xsd <<EOF
-<import namespace="$xmlns" schemaLocation="$xmlbasename"/>
-EOF
-		    fi
-		fi
+	    if [[ -e "$jar" ]]; then
+		jar -xf "$jar" schema org/springframework
 	    fi
 	done
-	cat >>schema.xsd <<'EOF'
+    done
+    cat >schema.xsd <<'EOF'
+<schema targetNamespace="aggregate" xmlns="http://www.w3.org/2001/XMLSchema" version="1.2">
+EOF
+    #find org/springframework -name '*.xsd'|sort
+    for xmlf in schema/*.xsd org/springframework/beans/factory/xml/*.xsd; do
+	xmlbasename=$(basename "$xmlf")
+	sed -i "$xmlf" -e 's,classpath:/schema/,,;'
+	#sed -i "$xmlf" -e 's,schemaLocation="http://www.ibm.com/webservices/xsd/j2ee_web_services_client_1_1.xsd,schemaLocation="j2ee_web_services_client_1_1.xsd,;'
+	if [[ ! -e "$xmlbasename" ]]; then
+	    ln -s "$xmlf" "$xmlbasename"
+	    if ! fgrep 'schemaLocation="http' "$xmlf" >/dev/null; then
+		xmlns=$(tr '\n' ' ' <"$xmlf" |sed -nre 's,.*<([^ ]+:|)schema [^>]*targetNamespace="([^"]+)".*,\2,p;')
+		if [[ -n "$xmlns" ]]; then
+		    cat >>schema.xsd <<EOF
+<import namespace="$xmlns" schemaLocation="$xmlbasename"/>
+EOF
+		fi
+	    fi
+	fi
+    done
+    cat >>schema.xsd <<'EOF'
 </schema>
 EOF
-	#cat schema.xsd
-	#ls -al
-	cdpop
-    fi
+    #cat schema.xsd
+    #ls -al
+    cdpop
+
+    cached_schemadir="$schemadir"
 
     if ! xmllint --nonet --xinclude --nowarning --noout --path "$schemadir" --schema "$schemadir"/schema.xsd "$@"; then
 	errx "XML syntax failure at line deploy script $l"
